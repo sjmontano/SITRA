@@ -1,0 +1,45 @@
+---
+---
+<h1>Registrar recurso</h1>
+<form id="f">
+  <label>Destino (to, address)<br /><input id="to" placeholder="0x..." size="45" /></label><br />
+  <label>Acta JSON<br /><textarea id="acta" rows="8" cols="60" placeholder='{"item":"..."}'></textarea></label><br />
+  <label>pdfHash (0x + 64 hex)<br /><input id="pdfHash" placeholder="0x..." size="70" /></label><br />
+  <label>pdfUrl<br /><input id="pdfUrl" placeholder="https://..." size="60" /></label><br />
+  <button type="submit">Registrar</button>
+</form>
+<p id="out"></p>
+<nav><a href="/">Inicio</a></nav>
+<script type="module">
+  import { keccakOf } from "../lib/transfer-sign.js";
+  import { ethers } from "https://esm.sh/ethers@6.13.0";
+  const $ = (id) => document.getElementById(id);
+  const isHash = (s) => /^0x[0-9a-fA-F]{64}$/.test(s || "");
+  $("f").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const to = $("to").value.trim();
+    const acta = $("acta").value.trim();
+    const pdfHash = $("pdfHash").value.trim();
+    const pdfUrl = $("pdfUrl").value.trim();
+    if (!to || !acta || !pdfHash || !pdfUrl) { $("out").textContent = "error: todos los campos son requeridos"; return; }
+    if (!isHash(pdfHash)) { $("out").textContent = "error: pdfHash debe ser 0x-prefijo 66 chars"; return; }
+    let hashEvento, resourceId;
+    try {
+      hashEvento = keccakOf(acta);
+      resourceId = keccakOf(acta + Date.now());
+    } catch (err) { $("out").textContent = "error: " + String(err.message || err); return; }
+    if (!isHash(hashEvento) || !isHash(resourceId)) { $("out").textContent = "error: hash calculado inválido"; return; }
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const from = accounts[0];
+      void from; void ethers;
+      const r = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resourceId, to, hashEvento, hashPDF: pdfHash, pdfUrl }),
+      });
+      const j = await r.json();
+      $("out").textContent = j.tx ? ("tx: " + j.tx) : ("error: " + (j.error || r.status));
+    } catch (err) { $("out").textContent = "error: " + String(err.message || err); }
+  });
+</script>
