@@ -15,5 +15,11 @@ pgdata/
 Thumbs.db
 ~$*
 
+# Builds (experimento 3 brazos / Task 6)
+frontend/dist/
+frontend/.astro/
+dist/
+.astro/
+
 # SDD scratch (ya ignorado aparte, doble seguro)
 .superpowers/
