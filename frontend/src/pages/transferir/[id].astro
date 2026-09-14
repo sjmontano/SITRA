@@ -2,7 +2,7 @@
 import { loadVerify } from "../../lib/verify.js";
 export const prerender = false;
 const { id } = Astro.params;
-const data = await loadVerify(id);
+const data = await loadVerify(id, Astro.url.origin);
 const last = data.onchain[data.onchain.length - 1];
 const hashEvento = last ? last.hashEvento : "";
 const hashPDF = last ? last.hashPDF : "";

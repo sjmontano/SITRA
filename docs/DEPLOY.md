@@ -7,6 +7,7 @@
 ## 2. Contrato Amoy
 - Faucet Amoy para `DEPLOYER_KEY`. `cd contracts && AMOY_RPC=... DEPLOYER_KEY=... SEED_A=0x.. SEED_B=0x.. npx hardhat run scripts/deploy.js --network amoy`.
 - Guarda `CONTRACT_ADDRESS`.
+- La dirección de RELAY_KEY debe estar registrada como institución (úsala como SEED_A o SEED_B, o llama registerInstitution con ella); si no, todas las escrituras revierten con "no-inst".
 
 ## 3. Vercel proyecto A (dApp+API)
 - Importa `sjmontano/SITRA`, Root Directory `frontend`, framework Astro.
@@ -15,6 +16,7 @@
 
 ## 4. Vercel proyecto B (brazo-b)
 - Importa mismo repo, Root Directory `brazo-b`. Sin env. Anota su URL para la tabla del experimento.
+- Nota: /status/1 es stub sin estado (revoked siempre []); demuestra independencia de host, no revocación real.
 
 ## 5. Verificar
 - `GET /api/resources/verify/<id>` responde `{onchain, offchain}`.

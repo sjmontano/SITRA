@@ -1,5 +1,5 @@
-export async function loadVerify(id) {
-  const r = await fetch(`/api/resources/verify/${id}`);
+export async function loadVerify(id, base = "") {
+  const r = await fetch(`${base}/api/resources/verify/${id}`);
   const j = await r.json();
   const chain = (j.onchain || []).map((e) => ({ ...e, hashEvento: String(e.hashEvento ?? ""), hashPDF: String(e.hashPDF ?? ""), from: String(e.from ?? ""), to: String(e.to ?? ""), timestamp: String(e.timestamp ?? "") }));
   const last = chain[chain.length - 1];

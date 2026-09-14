@@ -1,6 +1,6 @@
 ---
 import { loadVerify } from "../../lib/verify.js";
-const { id } = Astro.params; const data = await loadVerify(id);
+const { id } = Astro.params; const data = await loadVerify(id, Astro.url.origin);
 ---
 <h1>Custodia {id}</h1>
 <p>Custodio actual: {data.custodio}</p>
