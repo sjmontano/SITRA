@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "astro build"
+    "build": "astro build",
+    "sync:abi": "node scripts/sync-abi.js"
   },
   "dependencies": {
     "@astrojs/node": "^8.3.4",
+    "@astrojs/vercel": "^7.0.0",
     "astro": "^4.0.0",
+    "ethers": "^6.13.0",
+    "pg": "^8.12.0",
     "react": "^18.0.0"
   }
 }
