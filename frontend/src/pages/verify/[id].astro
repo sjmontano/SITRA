@@ -1,11 +1,81 @@
 ---
+import QRCode from "qrcode";
 import { loadVerify } from "../../lib/verify.js";
-const { id } = Astro.params; const data = await loadVerify(id, Astro.url.origin);
+export const prerender = false;
+const { id } = Astro.params;
+const data = await loadVerify(id, Astro.url.origin);
+const url = new URL(`/verify/${id}`, Astro.url.origin).toString();
+let qr = "";
+try { qr = await QRCode.toDataURL(url, { margin: 1, width: 280 }); } catch { qr = ""; }
+const last = data.onchain[data.onchain.length - 1];
+const nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
 ---
-<h1>Custodia {id}</h1>
-<p>Custodio actual: {data.custodio}</p>
-<p>Hash evento coincide: {String(data.okEvento)}</p>
-<p>Hash PDF coincide: {String(data.okPDF)}</p>
-<p><small>Este registro NO afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</small></p>
-<ul>{data.onchain.map(e => <li>{e.eventType} {e.from} → {e.to} {e.timestamp}</li>)}</ul>
-<img src={`https://api.qrserver.com/v1/create-qr-code/?data=/verify/${id}`} alt="QR" />
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificar {id} — SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/">← Inicio</a>
+    <a href={`/transferir/${id}`}>Transferir →</a>
+  </nav>
+  <div class="shell">
+    <p class="kicker">SITRA · Verificación pública</p>
+    <h1>Custodia verificable</h1>
+    <p class="mono">resourceId<br />{id}</p>
+    <div class="badges">
+      <span class={`badge ${data.custodio ? "ok" : "bad"}`}>Custodio: {data.custodio ?? "no encontrado"}</span>
+      <span class={`badge ${data.okEvento ? "ok" : "bad"}`}>{data.okEvento ? "✅" : "❌"} hash evento coincide</span>
+      <span class={`badge ${data.okPDF ? "ok" : "bad"}`}>{data.okPDF ? "✅" : "❌"} hash PDF coincide</span>
+      <span class="badge">{data.onchain.length} evento(s)</span>
+    </div>
+    {data.onchain.length === 0 ? (
+      <div class="form-card"><p class="desc">Sin eventos on-chain para este ID. Revisa el resourceId o la red Amoy.</p></div>
+    ) : (
+      <ul class="timeline">
+        {data.onchain.map((e, i) => (
+          <li>
+            <strong>#{i + 1} · {nombres[e.eventType] ?? e.eventType}</strong> · {e.from} → {e.to}<br />
+            <span class="mono">hE {e.hashEvento}<br />hP {e.hashPDF}<br />ts {e.timestamp}</span>
+          </li>
+        ))}
+      </ul>
+    )}
+    {data.offchain && (
+      <div class="form-card">
+        <p class="desc">Off-chain (Supabase): <span class="mono">{data.offchain.pdf_url}</span></p>
+        <p class="mono">hash_evento: {data.offchain.hash_evento}<br />hash_pdf: {data.offchain.hash_pdf}</p>
+      </div>
+    )}
+    <div class="qr-box">
+      {qr ? <img src={qr} alt="QR verificación SITRA" width="140" height="140" /> : <p>QR no disponible</p>}
+      <p><strong>Acta + QR.</strong> Escanea para abrir esta verificación en cualquier dispositivo. El QR apunta a esta URL pública.<br /><span class="mono">{url}</span>
+        <span class="qr-actions">
+          <button id="btnCopy" type="button">Copiar link</button>
+          <button id="btnDl" type="button" class="ghost">Descargar QR</button>
+          <a href={`/transferir/${id}`}>Transferir →</a>
+        </span>
+      </p>
+    </div>
+    <p class="oracle">Este registro NO afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</p>
+  </div>
+  <script is:inline define:vars={{ url, qr }}>
+    document.getElementById("btnCopy")?.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(url); alert("Link copiado"); }
+      catch { prompt("Copia el link:", url); }
+    });
+    document.getElementById("btnDl")?.addEventListener("click", () => {
+      if (!qr) return;
+      const a = document.createElement("a"); a.href = qr; a.download = "sitra-qr.png"; a.click();
+    });
+  </script>
+</body>
+</html>

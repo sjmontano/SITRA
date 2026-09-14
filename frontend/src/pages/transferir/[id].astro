@@ -7,74 +7,88 @@ const last = data.onchain[data.onchain.length - 1];
 const hashEvento = last ? last.hashEvento : "";
 const hashPDF = last ? last.hashPDF : "";
 const contractAddress = import.meta.env.PUBLIC_CONTRACT_ADDRESS || "";
+const nonceSugerido = data.onchain.length;
 ---
-<h1>Transferir {id}</h1>
-<p>Custodio actual (from): {data.custodio || "desconocido"}</p>
-<p>Oráculo EIP-712: CustodiaActas v1 — contrato: {contractAddress}</p>
-<form id="f">
-  <label>From (emisor = custodio)<br /><input id="from" size="45" value={data.custodio || ""} /></label><br />
-  <label>To (receptor)<br /><input id="to" size="45" placeholder="0x..." /></label><br />
-  <label>hashEvento (editable)<br /><input id="hashEvento" size="70" value={hashEvento} /></label><br />
-  <label>hashPDF (editable)<br /><input id="hashPDF" size="70" value={hashPDF} /></label><br />
-  <label>nonce (editable, default 1)<br /><input id="nonce" type="number" min="1" value="1" /></label>
-  <p><small>Ajusta si el recurso ya se transfirió antes (nonce = nº de transfers previas + 1).</small></p>
-  <label>Firma receptor (sigTo — el receptor abre la misma URL en otro navegador, completa los mismos campos y firma)<br /><textarea id="sigTo" rows="4" cols="70" placeholder="0x..."></textarea></label><br />
-  <button type="button" id="signFrom">Firmar como emisor</button>
-  <button type="button" id="signTo">Firmar como receptor</button>
-  <button type="submit">Enviar transfer</button>
-</form>
-<p id="out"></p>
-<p id="sigs"></p>
-<nav><a href="/">Inicio</a> | <a href={`/verify/${id}`}>Verificar</a></nav>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transferir {id} — SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/">← Inicio</a>
+    <a href={`/verify/${id}`}>Verificar →</a>
+  </nav>
+  <div class="shell">
+    <p class="kicker">SITRA · Autorización dual EIP-712</p>
+    <h1>Transferir custodia</h1>
+    <p class="desc">Custodio actual (<code>from</code>): <span class="mono">{data.custodio || "desconocido"}</span><br />Contrato <code>CustodiaActas v1</code>: <span class="mono">{contractAddress || "no configurado"}</span></p>
+    <div class="form-card">
+      <form id="f">
+        <div class="field"><label>From — custodio actual</label><input id="from" value={data.custodio || ""} spellcheck="false" /></div>
+        <div class="field"><label>To — nuevo custodio (institución)</label><input id="to" placeholder="0x..." spellcheck="false" /></div>
+        <div class="field"><label>hashEvento</label><input id="hashEvento" value={hashEvento} spellcheck="false" /></div>
+        <div class="field"><label>hashPDF</label><input id="hashPDF" value={hashPDF} spellcheck="false" /></div>
+        <div class="field"><label>nonce — sugerido {nonceSugerido} (transfers previas + 1)</label><input id="nonce" type="number" min="1" value={String(nonceSugerido || 1)} /></div>
+        <div class="field"><label>sigTo — el receptor abre esta misma URL en otro navegador, firma y pega aquí</label><textarea id="sigTo" rows="3" placeholder="0x..."></textarea></div>
+        <div class="btn-row">
+          <button class="btn-ghost" type="button" id="signFrom">1 · Firmar emisor</button>
+          <button class="btn-ghost" type="button" id="signTo">2 · Firmar receptor</button>
+          <button class="btn-primary" type="submit">3 · Enviar transfer dual</button>
+        </div>
+      </form>
+      <p class="out" id="out"></p>
+      <p class="hash-preview" id="sigs"></p>
+    </div>
+    <p class="oracle">Se requieren <strong>sigFrom + sigTo</strong> sobre el mismo digest. Sin ambas, el contrato revierte.</p>
+  </div>
 <script type="module" define:vars={{ resourceId: id, contractAddress }}>
   import { signTransfer } from "../../lib/transfer-sign.js";
   const $ = (id) => document.getElementById(id);
+  const out = $("out");
+  const say = (m, ok) => { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = m; };
   let sigFrom = "";
   const isHash = (s) => /^0x[0-9a-fA-F]{64}$/.test(s || "");
   async function doSign() {
-    const from = $("from").value.trim();
-    const to = $("to").value.trim();
-    const hashEvento = $("hashEvento").value.trim();
-    const hashPDF = $("hashPDF").value.trim();
+    const from = $("from").value.trim(), to = $("to").value.trim();
+    const hashEvento = $("hashEvento").value.trim(), hashPDF = $("hashPDF").value.trim();
     const nonce = Number($("nonce").value);
-    if (!from || !to || !hashEvento || !hashPDF) { $("out").textContent = "error: from/to/hashes requeridos"; return null; }
-    if (!isHash(hashEvento) || !isHash(hashPDF)) { $("out").textContent = "error: hashes deben ser 0x-prefijo 66 chars"; return null; }
-    if (!Number.isInteger(nonce) || nonce < 1) { $("out").textContent = "error: nonce >= 1"; return null; }
+    if (!from || !to || !hashEvento || !hashPDF) { say("error: from/to/hashes requeridos", false); return null; }
+    if (!isHash(hashEvento) || !isHash(hashPDF)) { say("error: hashes 0x + 64 hex", false); return null; }
+    if (!Number.isInteger(nonce) || nonce < 1) { say("error: nonce >= 1", false); return null; }
     return signTransfer({ contractAddress, from, to, resourceId, hashEvento, hashPDF, nonce });
   }
   $("signFrom").addEventListener("click", async () => {
-    try {
-      const sig = await doSign();
-      if (!sig) return;
-      sigFrom = sig;
-      $("sigs").textContent = "sigFrom lista. Pega sigTo del receptor y envía.";
-      $("out").textContent = "";
-    } catch (err) { $("out").textContent = "error: " + String(err.message || err); }
+    try { const s = await doSign(); if (!s) return; sigFrom = s; $("sigs").textContent = "sigFrom lista ✅ Ahora pega sigTo y envía."; say("firma emisor lista", true); }
+    catch (e) { say("error: " + String(e.message || e), false); }
   });
   $("signTo").addEventListener("click", async () => {
-    try {
-      const sig = await doSign();
-      if (!sig) return;
-      $("sigTo").value = sig;
-      $("out").textContent = "firma receptor lista en sigTo.";
-    } catch (err) { $("out").textContent = "error: " + String(err.message || err); }
+    try { const s = await doSign(); if (!s) return; $("sigTo").value = s; say("firma receptor lista en sigTo ✅", true); }
+    catch (e) { say("error: " + String(e.message || e), false); }
   });
   $("f").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const from = $("from").value.trim();
-    const to = $("to").value.trim();
-    const hashEvento = $("hashEvento").value.trim();
-    const hashPDF = $("hashPDF").value.trim();
+    const from = $("from").value.trim(), to = $("to").value.trim();
+    const hashEvento = $("hashEvento").value.trim(), hashPDF = $("hashPDF").value.trim();
     const sigTo = $("sigTo").value.trim();
-    if (!sigFrom || !sigTo) { $("out").textContent = "error: se requieren sigFrom y sigTo"; return; }
+    if (!sigFrom || !sigTo) return say("error: se requieren sigFrom y sigTo", false);
+    say("enviando a Amoy…", true);
     try {
       const r = await fetch(`/api/resources/${resourceId}/transfer`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ from, to, hashEvento, hashPDF, sigFrom, sigTo }),
       });
       const j = await r.json();
-      $("out").textContent = j.tx ? ("tx: " + j.tx) : ("error: " + (j.error || r.status));
-    } catch (err) { $("out").textContent = "error: " + String(err.message || err); }
+      say(j.tx ? "✅ transferido · tx: " + j.tx : "error: " + (j.error || r.status), !!j.tx);
+    } catch (err) { say("error: " + String(err.message || err), false); }
   });
 </script>
+</body>
+</html>
