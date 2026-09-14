@@ -21,3 +21,4 @@
 
 ## 5. Dos hashes
 - hashEvento = keccak256(JSON acta canónica ordenada). hashPDF = keccak256(bytes PDF). Ambos on-chain, nunca el documento.
+- Límite oráculo: este registro no afirma veracidad física ni localización; solo prueba doble firma en orden append-only.

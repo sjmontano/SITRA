@@ -52,3 +52,7 @@ B independiente OK: true
 ```
 
 Amoy/Postgres reales pendientes de despliegue (sin credenciales en sandbox).
+## Oráculo y límites
+- No protege veracidad física ni localización. Atacante con llaves válidas puede firmar acta falsa (llave comprometida pierde en los 3 brazos).
+## Fuentes
+- Computadores para Educar $60.000M (Caracol) · PAE $53.117M (El Espectador) · Ley 80 / Ley 527 / RFC3161 / RFC6962 / W3C StatusList / Blockcerts / MIT diplomas / EIP-5192.
