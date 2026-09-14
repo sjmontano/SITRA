@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atacar — Laboratorio SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/">← Inicio</a>
+    <span class="topbar-tabs"><a href="/laboratorio/minar">Minar</a> · <a href="/laboratorio/cadena">Cadena</a> · <a href="/laboratorio/atacar" class="on">Atacar</a></span>
+    <a href="/laboratorio/cadena">Ver cadena →</a>
+  </nav>
+  <div class="shell">
+    <p class="kicker">Laboratorio · prueba de inmutabilidad</p>
+    <h1>Ataca tu propia cadena</h1>
+    <p class="desc">Haz de atacante: cambia el texto de un bloque ya minado. Verás que su hash <strong>ya no coincide</strong> y que todos los bloques siguientes quedan rotos — igual que el demo <code>01-update-admin.js</code> pero con tus palabras.</p>
+
+    <div id="empty" class="form-card" hidden>
+      <p class="desc">Necesitas al menos 1 bloque minado para atacar.</p>
+      <div class="btn-row"><a class="btn-primary" href="/laboratorio/minar" style="text-decoration:none">Ir a minar →</a></div>
+    </div>
+
+    <div class="form-card" id="atkCard" hidden>
+      <form id="f">
+        <div class="field">
+          <label for="idx">Bloque a alterar</label>
+          <select id="idx"></select>
+        </div>
+        <div class="field">
+          <label for="evil">Texto falso (reemplaza al data original)</label>
+          <textarea id="evil" rows="3" placeholder="ej. esta crypto moneda es la peor"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" type="submit">🦹 Alterar bloque</button>
+          <button class="btn-ghost" type="button" id="btnRemine" disabled>⛏️ Re-minar cadena (ver el costo)</button>
+          <button class="btn-ghost" type="button" id="btnRestore">Restaurar original</button>
+        </div>
+      </form>
+      <p class="out" id="out"></p>
+      <div id="compare" class="compare" hidden>
+        <div><span>hash guardado</span><code id="cOld"></code></div>
+        <div><span>hash recomputado</span><code id="cNew"></code></div>
+        <div><span>veredicto</span><strong id="cVerdict"></strong></div>
+      </div>
+      <p class="hash-preview" id="cost"></p>
+    </div>
+
+    <div class="vs" id="lesson" hidden>
+      <div class="vs-col bad">
+        <h3>🦹 Sin re-minar</h3>
+        <p>El bloque alterado y todos los siguientes quedan <strong>inválidos</strong>. Cualquiera que verifique lo detecta al instante.</p>
+      </div>
+      <div class="vs-col good">
+        <h3>⛏️ Re-minando todo</h3>
+        <p>Para ocultar el fraude hay que re-minar el bloque <strong>y cada uno de los siguientes</strong>. Ese costo es la seguridad de blockchain — y de SITRA.</p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline src="/sitra-lab.js"></script>
+  <script is:inline>
+    (function () {
+      var Lab = window.SitraLab;
+      var $ = function (id) { return document.getElementById(id); };
+      var out = $("out"), backup = null, attackedIdx = -1;
+
+      function say(msg, ok) { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; }
+
+      function refresh() {
+        var chain = Lab.loadChain() || [];
+        var has = chain.length > 0;
+        $("empty").hidden = has;
+        $("atkCard").hidden = !has;
+        if (!has) return;
+        var sel = $("idx");
+        sel.innerHTML = "";
+        chain.forEach(function (b, i) {
+          var o = document.createElement("option");
+          o.value = i;
+          o.textContent = "Bloque #" + b.index + " — " + String(b.data).slice(0, 40);
+          sel.appendChild(o);
+        });
+      }
+
+      $("f").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var chain = Lab.loadChain() || [];
+        var i = Number($("idx").value);
+        var evil = $("evil").value.trim();
+        if (!evil) return say("error: escribe el texto falso", false);
+        if (!backup) backup = JSON.parse(JSON.stringify(chain));
+        attackedIdx = i;
+        chain[i].data = evil;
+        Lab.saveChain(chain);
+        var recomputed = await Lab.createHash(chain[i]);
+        $("cOld").textContent = chain[i].hash;
+        $("cNew").textContent = recomputed;
+        var broken = recomputed !== chain[i].hash;
+        $("cVerdict").textContent = broken ? "❌ NO coinciden — bloque inválido" : "✅ coinciden";
+        $("compare").hidden = false;
+        var v = await Lab.verifyChain(chain, Lab.getDifficulty());
+        var rotos = v.ok ? 0 : chain.length - v.failIndex;
+        say("🦹 Ataque aplicado al bloque #" + chain[i].index + ". Hash alterado y " + rotos + " bloque(s) inválidos (este + siguientes).", false);
+        $("btnRemine").disabled = false;
+        $("lesson").hidden = false;
+        $("cost").textContent = "";
+      });
+
+      $("btnRemine").addEventListener("click", async function () {
+        var chain = Lab.loadChain() || [];
+        var diff = Lab.getDifficulty();
+        if (attackedIdx < 0) return;
+        $("btnRemine").disabled = true;
+        say("⛏️ Re-minando desde el bloque #" + chain[attackedIdx].index + "…", true);
+        var totalNonce = 0, t0 = performance.now();
+        for (var i = attackedIdx; i < chain.length; i++) {
+          chain[i].nonce = 0;
+          chain[i].date = new Date().toString();
+          if (i > 0) chain[i].previous_hash = chain[i - 1].hash;
+          await Lab.mineBlock(chain[i], diff, null);
+          totalNonce += chain[i].nonce;
+          Lab.saveChain(chain);
+          say("⛏️ Re-minado bloque #" + chain[i].index + " (nonce " + chain[i].nonce.toLocaleString("es") + ")…", true);
+        }
+        var secs = ((performance.now() - t0) / 1000).toFixed(1);
+        var v = await Lab.verifyChain(chain, diff);
+        say(v.ok ? "Cadena válida otra vez ✅ — pero costó re-minar " + (chain.length - attackedIdx) + " bloque(s), " + totalNonce.toLocaleString("es") + " nonces en " + secs + "s. Ese es el precio del fraude." : "Sigue rota.", v.ok);
+        $("cost").textContent = "Costo del ataque oculto: " + totalNonce.toLocaleString("es") + " hashes en " + secs + "s para " + (chain.length - attackedIdx) + " bloque(s). En una red real, además, los demás nodos ya tienen la copia original.";
+      });
+
+      $("btnRestore").addEventListener("click", function () {
+        if (!backup) return say("Nada que restaurar.", false);
+        Lab.saveChain(backup);
+        backup = null; attackedIdx = -1;
+        $("compare").hidden = true; $("lesson").hidden = true; $("cost").textContent = "";
+        $("btnRemine").disabled = true; $("evil").value = "";
+        refresh();
+        say("Cadena original restaurada ✅", true);
+      });
+
+      refresh();
+    })();
+  </script>
+</body>
+</html>

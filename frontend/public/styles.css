@@ -741,3 +741,58 @@ th { color: var(--muted); font-weight: 500; }
 }
 .qr-actions .ghost { background: transparent; color: #000; }
 .oracle { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+
+/* --- Laboratorio (réplica visual del ejercicio de clase) --- */
+.topbar-tabs { font-size: 13px; color: var(--muted); }
+.topbar-tabs a.on { opacity: 1; font-weight: 600; border-bottom: 2px solid #fff; padding-bottom: 2px; }
+.shell-wide { max-width: 860px; }
+.field select {
+  width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.5); color: #fff; padding: 12px 14px;
+  font-size: 13.5px; font-family: var(--font-sans); outline: none;
+}
+.field select:focus { border-color: rgba(255,255,255,0.6); }
+.lab-progress { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 16px; opacity: 0; }
+.lab-progress.on { opacity: 1; }
+.lab-progress span { display: block; height: 100%; width: 30%; border-radius: 999px; background: #fff; animation: labSlide 1s ease-in-out infinite alternate; }
+@keyframes labSlide { from { transform: translateX(-40%); } to { transform: translateX(280%); } }
+.mine-live {
+  margin-top: 14px; border: 1px dashed rgba(255,255,255,0.25); border-radius: 14px; padding: 12px 14px;
+}
+.mine-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; padding: 4px 0; }
+.mine-row span { color: var(--muted); }
+.mine-row strong { color: #fff; font-variant-numeric: tabular-nums; }
+.mine-row code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #b8ffd8; word-break: break-all; text-align: right; }
+.block-card {
+  background: rgba(28,28,30,0.85); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px; padding: 18px; margin-top: 14px;
+}
+.block-card.broken { border-color: rgba(255,120,120,0.55); background: rgba(255,120,120,0.05); }
+.block-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.block-grid { display: grid; gap: 8px; grid-template-columns: 1fr; margin-bottom: 10px; }
+@media (min-width: 640px) { .block-grid { grid-template-columns: 1.4fr 1fr; } }
+.block-grid span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 2px; }
+.block-grid strong { font-size: 13.5px; font-weight: 500; word-break: break-word; }
+.block-card .mono { margin: 8px 0 0; }
+.chain-links { display: flex; flex-direction: column; }
+.chain-link { text-align: center; font-size: 11.5px; color: var(--muted); padding: 6px 0; }
+.chain-link span { border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 4px 12px; }
+.json-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.json-head h3 { font-size: 14px; }
+.json-view {
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+  padding: 16px; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; line-height: 1.6;
+  color: #d8ffd8; overflow-x: auto; max-height: 420px; overflow-y: auto; white-space: pre;
+}
+.compare { margin-top: 14px; display: grid; gap: 8px; }
+.compare div { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 12px; }
+.compare span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
+.compare code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #ffc9c9; word-break: break-all; }
+.compare strong { font-size: 13px; }
+.vs { display: grid; gap: 12px; grid-template-columns: 1fr; margin-top: 16px; }
+@media (min-width: 760px) { .vs { grid-template-columns: 1fr 1fr; } }
+.vs-col { border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.12); }
+.vs-col h3 { font-size: 14px; margin-bottom: 10px; }
+.vs-col p { font-size: 13px; line-height: 1.6; color: #cfcfcf; }
+.vs-col.bad { background: rgba(255,120,120,0.06); border-color: rgba(255,120,120,0.3); }
+.vs-col.good { background: rgba(80,255,160,0.06); border-color: rgba(80,255,160,0.3); }

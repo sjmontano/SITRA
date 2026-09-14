@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minar bloque — Laboratorio SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/">← Inicio</a>
+    <span class="topbar-tabs"><a href="/laboratorio/minar" class="on">Minar</a> · <a href="/laboratorio/cadena">Cadena</a> · <a href="/laboratorio/atacar">Atacar</a></span>
+    <a href="/laboratorio/cadena">Ver cadena →</a>
+  </nav>
+  <div class="shell">
+    <p class="kicker">Laboratorio · réplica del ejercicio de clase</p>
+    <h1>Minar bloque</h1>
+    <p class="desc">Escribe cualquier texto (= <code>data</code> del bloque) y mínalo como en el Python del profesor: el <code>nonce</code> sube hasta que el hash empiece con la dificultad. El bloque se encadena al anterior con <code>previous_hash</code>.</p>
+
+    <div class="lab-progress" id="labBar" aria-hidden="true"><span></span></div>
+
+    <div class="form-card">
+      <form id="f">
+        <div class="field">
+          <label for="data">Texto del bloque (data)</label>
+          <textarea id="data" rows="3" placeholder="ej. esta crypto moneda es la mejor"></textarea>
+        </div>
+        <div class="field">
+          <label for="diff">Dificultad (prefijo del hash)</label>
+          <select id="diff">
+            <option value="0">0 · instantáneo (demo rápida)</option>
+            <option value="00" selected>00 · como en clase (segundos)</option>
+            <option value="000">000 · lento (puede tardar minutos)</option>
+          </select>
+          <p class="hash-preview" id="diffHint">Igual que <code>BlockChain('...', '00')</code> del ejercicio.</p>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" type="submit" id="btnMine">⛏️ Minar y agregar</button>
+          <button class="btn-ghost" type="button" id="btnCancel" disabled>Cancelar</button>
+          <button class="btn-ghost" type="button" id="btnGenesis">Crear génesis</button>
+        </div>
+      </form>
+
+      <div class="mine-live" id="live" hidden>
+        <div class="mine-row"><span>nonce</span><strong id="liveNonce">0</strong></div>
+        <div class="mine-row"><span>hash actual</span><code id="liveHash">—</code></div>
+      </div>
+
+      <p class="out" id="out"></p>
+
+      <div id="result" class="block-card" hidden>
+        <p class="block-title">Bloque <span id="rIndex"></span> minado ✅ <span class="badge ok" id="rBadge"></span></p>
+        <p class="mono" id="rMeta"></p>
+        <p class="mono">hash<br /><span id="rHash"></span></p>
+        <div class="qr-actions">
+          <a id="goChain" href="/laboratorio/cadena">Ver en la cadena →</a>
+          <button type="button" class="ghost" id="btnAgain">Minar otro</button>
+        </div>
+      </div>
+    </div>
+    <p class="oracle">Misma fórmula de clase: <code>sha256(index + date + data + previous_hash + nonce)</code>. Si es tu primer bloque, usa “Crear génesis”.</p>
+  </div>
+
+  <script is:inline src="/sitra-lab.js"></script>
+  <script is:inline>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var out = $("out"), live = $("live"), result = $("result");
+      var mining = false;
+
+      function say(msg, ok) { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; }
+      function hideOut() { out.className = "out"; out.textContent = ""; }
+
+      $("diff").value = window.SitraLab.getDifficulty();
+      $("diff").addEventListener("change", function () { window.SitraLab.setDifficulty($("diff").value); });
+
+      $("btnGenesis").addEventListener("click", async function () {
+        var chain = window.SitraLab.loadChain();
+        if (chain && chain.length) return say("Ya existe una cadena con " + chain.length + " bloque(s).", false);
+        var b = window.SitraLab.makeBlock(0, "info de genesis", "");
+        b.hash = await window.SitraLab.createHash(b);
+        window.SitraLab.saveChain([b]);
+        say("🧱 Bloque génesis creado (sin minar, igual que en clase). Ahora mina el bloque 1.", true);
+      });
+
+      $("btnCancel").addEventListener("click", function () { window.SitraLab.cancelMine(); });
+
+      $("btnAgain").addEventListener("click", function () {
+        result.hidden = true; hideOut(); $("data").value = ""; $("data").focus();
+      });
+
+      $("f").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        if (mining) return;
+        var data = $("data").value.trim();
+        if (!data) return say("error: escribe el texto del bloque", false);
+        var difficulty = $("diff").value;
+        var chain = window.SitraLab.loadChain() || [];
+        var prev = chain.length ? chain[chain.length - 1].hash : "";
+        var block = window.SitraLab.makeBlock(chain.length, data, prev);
+
+        mining = true;
+        $("btnMine").disabled = true; $("btnCancel").disabled = false;
+        live.hidden = false; result.hidden = true; hideOut();
+        $("labBar").classList.add("on");
+        var t0 = performance.now();
+        say("⛏️ Minando… el nonce sube hasta que el hash empiece con '" + difficulty + "'", true);
+
+        var res = await window.SitraLab.mineBlock(block, difficulty, function (p) {
+          $("liveNonce").textContent = p.nonce.toLocaleString("es");
+          $("liveHash").textContent = p.hash;
+        });
+
+        $("labBar").classList.remove("on");
+        mining = false;
+        $("btnMine").disabled = false; $("btnCancel").disabled = true;
+
+        if (res && res.cancelled) return say("Minado cancelado. Nada se guardó.", false);
+        chain.push(block);
+        window.SitraLab.saveChain(chain);
+        var secs = ((performance.now() - t0) / 1000).toFixed(1);
+        say("Minado! " + block.hash.slice(0, 16) + "… con nonce " + block.nonce + " en " + secs + "s — igual que el print de clase.", true);
+        $("rIndex").textContent = "#" + block.index;
+        $("rBadge").textContent = "nonce " + block.nonce.toLocaleString("es");
+        $("rMeta").innerHTML = "prev: " + window.SitraLab.shortHash(block.previous_hash) + "<br/>date: " + block.date;
+        $("rHash").textContent = block.hash;
+        result.hidden = false;
+      });
+    })();
+  </script>
+</body>
+</html>

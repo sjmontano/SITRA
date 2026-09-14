@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadena — Laboratorio SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/">← Inicio</a>
+    <span class="topbar-tabs"><a href="/laboratorio/minar">Minar</a> · <a href="/laboratorio/cadena" class="on">Cadena</a> · <a href="/laboratorio/atacar">Atacar</a></span>
+    <a href="/laboratorio/minar">Minar →</a>
+  </nav>
+  <div class="shell shell-wide">
+    <p class="kicker">Laboratorio · tu blockchain en el navegador</p>
+    <h1>Cadena de bloques</h1>
+    <p class="desc" id="summary">Cargando…</p>
+    <div class="badges" id="badges"></div>
+
+    <div id="empty" class="form-card" hidden>
+      <p class="desc">Aún no hay bloques. Crea el génesis y mina tu primer bloque.</p>
+      <div class="btn-row"><a class="btn-primary" href="/laboratorio/minar" style="text-decoration:none">Ir a minar →</a></div>
+    </div>
+
+    <div class="chain-links" id="chain"></div>
+
+    <div class="form-card" id="jsonCard" hidden>
+      <div class="json-head">
+        <h3>Vista JSON (como el <code>print</code> de clase)</h3>
+        <div class="qr-actions">
+          <button type="button" id="btnCopy">Copiar JSON</button>
+          <button type="button" class="ghost" id="btnReset">Borrar cadena</button>
+        </div>
+      </div>
+      <pre class="json-view" id="jsonView"></pre>
+    </div>
+  </div>
+
+  <script is:inline src="/sitra-lab.js"></script>
+  <script is:inline>
+    (function () {
+      var Lab = window.SitraLab;
+      function el(tag, cls, html) {
+        var d = document.createElement(tag);
+        if (cls) d.className = cls;
+        if (html != null) d.innerHTML = html;
+        return d;
+      }
+      function esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      async function render() {
+        var chain = Lab.loadChain() || [];
+        var diff = Lab.getDifficulty();
+        var summary = document.getElementById("summary");
+        var badges = document.getElementById("badges");
+        var box = document.getElementById("chain");
+        box.innerHTML = ""; badges.innerHTML = "";
+
+        if (!chain.length) {
+          document.getElementById("empty").hidden = false;
+          document.getElementById("jsonCard").hidden = true;
+          summary.textContent = "Cadena vacía.";
+          return;
+        }
+        var v = await Lab.verifyChain(chain, diff);
+        summary.innerHTML = "<strong>" + chain.length + "</strong> bloque(s) · dificultad <code>'" + esc(diff) + "'</code> · cada bloque apunta al hash del anterior.";
+        var b1 = el("span", "badge " + (v.ok ? "ok" : "bad"), v.ok ? "✅ cadena válida" : "❌ cadena rota en bloque #" + v.failIndex);
+        badges.appendChild(b1);
+        if (!v.ok) {
+          var b2 = el("a", "badge bad", "Ir a atacar →");
+          b2.href = "/laboratorio/atacar";
+          badges.appendChild(b2);
+        }
+
+        chain.forEach(function (b, i) {
+          var card = el("article", "block-card" + (!v.ok && i >= v.failIndex ? " broken" : ""));
+          card.appendChild(el("p", "block-title", "Bloque #" + b.index + (i === 0 ? " · génesis 🧱" : "")));
+          var grid = el("div", "block-grid");
+          grid.appendChild(el("div", "", "<span>data</span><strong>" + esc(b.data) + "</strong>"));
+          grid.appendChild(el("div", "", "<span>nonce</span><strong>" + Number(b.nonce).toLocaleString("es") + "</strong>"));
+          grid.appendChild(el("div", "", "<span>date</span><strong class='mono'>" + esc(b.date) + "</strong>"));
+          card.appendChild(grid);
+          card.appendChild(el("p", "mono", "previous_hash<br/>" + esc(b.previous_hash || "(vacío · es el génesis)")));
+          card.appendChild(el("p", "mono", "hash<br/>" + esc(b.hash)));
+          box.appendChild(card);
+          if (i < chain.length - 1) {
+            var link = el("div", "chain-link", "<span>▼ previous_hash del siguiente apunta aquí</span>");
+            box.appendChild(link);
+          }
+        });
+
+        document.getElementById("jsonView").textContent = JSON.stringify(chain, null, 2);
+        document.getElementById("jsonCard").hidden = false;
+      }
+
+      document.getElementById("btnCopy").addEventListener("click", async function () {
+        try { await navigator.clipboard.writeText(document.getElementById("jsonView").textContent); alert("JSON copiado"); }
+        catch (e) { alert("No se pudo copiar"); }
+      });
+      document.getElementById("btnReset").addEventListener("click", function () {
+        if (!confirm("¿Borrar toda la cadena del laboratorio?")) return;
+        localStorage.removeItem("sitra-lab-chain");
+        render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
