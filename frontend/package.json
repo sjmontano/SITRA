@@ -2,6 +2,7 @@
   "name": "sitra-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": { "node": "20.x" },
   "scripts": {
     "build": "astro build",
     "sync:abi": "node scripts/sync-abi.js"

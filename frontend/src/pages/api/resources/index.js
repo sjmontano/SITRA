@@ -1,5 +1,5 @@
-import { getPool } from "../../../../lib/server/db.js";
-import { getContract, relaySigner } from "../../../../lib/server/chain.js";
+import { getPool } from "../../../lib/server/db.js";
+import { getContract, relaySigner } from "../../../lib/server/chain.js";
 export const prerender = false;
 export async function POST({ request }) {
   try {

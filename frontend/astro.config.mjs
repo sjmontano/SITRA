@@ -1,2 +1,2 @@
-import node from "@astrojs/node";
-export default { output: "server", adapter: node({ mode: "standalone" }) };
+import vercel from "@astrojs/vercel/serverless";
+export default { output: "server", adapter: vercel() };
