@@ -1,0 +1,1 @@
+{"dependencies":{"@openzeppelin/contracts":"5.0.2"},"devDependencies":{"@nomicfoundation/hardhat-toolbox":"^4.0.0","hardhat":"^2.22.15"},"name":"custodia-contracts","private":true,"version":"1.0.0"}
