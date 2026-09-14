@@ -1,0 +1,19 @@
+# Node / Hardhat
+node_modules/
+artifacts/
+cache/
+coverage/
+.env
+*.log
+
+# Postgres / local
+*.local.md
+pgdata/
+
+# OS / Office
+.DS_Store
+Thumbs.db
+~$*
+
+# SDD scratch (ya ignorado aparte, doble seguro)
+.superpowers/
