@@ -639,18 +639,39 @@ th { color: var(--muted); font-weight: 500; }
 .inner { max-width: 680px; margin: 0 auto; padding: 48px 20px; }
 
 /* --- Hero en dos columnas --- */
-.hero-grid { max-width: 1080px; }
+.hero-grid { max-width: 1120px; }
+.header { max-width: 1120px; }
 .hero-copy { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
 .hero-visual { display: none; }
+.hero-actions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: clamp(18px, 2.6vh, 28px);
+  margin-top: clamp(18px, 2.6vh, 28px);
+}
+.hero-actions .lookup { margin-top: 0; }
 @media (min-width: 900px) {
   .hero-grid {
-    display: grid; grid-template-columns: 1.1fr 0.9fr;
-    gap: clamp(24px, 4vw, 64px); align-items: center; text-align: left;
+    display: grid; grid-template-columns: 1fr 1fr;
+    grid-template-areas: "copy visual" "actions actions";
+    gap: clamp(24px, 4vw, 64px) clamp(24px, 3vw, 48px); align-items: center; text-align: left;
   }
-  .hero-copy { align-items: flex-start; text-align: left; }
+  .hero-copy { grid-area: copy; align-items: flex-start; text-align: left; }
   .hero-copy .trust-row, .hero-copy .cta-row, .hero-copy .lookup { justify-content: flex-start; }
   .hero-copy .headline { align-items: flex-start; }
   .hero-copy .subhead { margin-left: 0; margin-right: 0; }
+  .hero-visual { grid-area: visual; }
+  .hero-actions {
+    grid-area: actions;
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: clamp(18px, 2.6vh, 28px);
+    margin-top: 6px;
+  }
+  .hero-actions .lookup { margin-top: 0; }
+  .hero-actions .lookup-hint { flex-basis: 100%; text-align: center; margin-top: 2px; }
   .hero-visual { display: flex; flex-direction: column; align-items: center; gap: 18px; justify-content: center; }
   .hero-visual img {
     width: min(100%, 240px); aspect-ratio: 1; object-fit: cover; border-radius: 28px;

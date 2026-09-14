@@ -57,18 +57,6 @@
         Actas con doble firma y huella SHA-256 en blockchain.
         Ningún admin puede borrar el historial.
       </p>
-
-      <div class="cta-row anim" style="--d: 0.4s">
-        <a href="/registrar" class="cta">Registrar recurso</a>
-        <a href="/laboratorio/minar" class="btn-ghost">⛏️ Laboratorio</a>
-      </div>
-
-      <form class="lookup anim" id="verificar" style="--d: 0.46s" onsubmit="return false">
-        <input id="resourceId" placeholder="resourceId (0x… ej. hash de COMP-001)" spellcheck="false" autocomplete="off" />
-        <button type="button" class="btn-ghost" id="btnVerify">Verificar</button>
-        <button type="button" class="btn-ghost" id="btnTransfer">Transferir</button>
-      </form>
-      <p class="lookup-hint">Verificación pública: <code>GET /verify/:id</code> compara hash on-chain vs Supabase.</p>
       </div>
 
       <div class="hero-visual anim" style="--d: 0.2s" aria-hidden="true">
@@ -78,6 +66,17 @@
           <div class="mini"><i class="fa-solid fa-link"></i><span>Append-only sin borrado</span></div>
           <div class="mini"><i class="fa-solid fa-qrcode"></i><span>QR verificable</span></div>
         </div>
+      </div>
+
+      <div class="hero-actions anim" style="--d: 0.4s">
+        <a href="/registrar" class="cta">Registrar recurso</a>
+        <a href="/laboratorio/minar" class="btn-ghost">⛏️ Laboratorio</a>
+        <form class="lookup" id="verificar" onsubmit="return false">
+          <input id="resourceId" placeholder="resourceId (0x… ej. hash de COMP-001)" spellcheck="false" autocomplete="off" />
+          <button type="button" class="btn-ghost" id="btnVerify">Verificar</button>
+          <button type="button" class="btn-ghost" id="btnTransfer">Transferir</button>
+        </form>
+        <p class="lookup-hint">Verificación pública: <code>GET /verify/:id</code> compara hash on-chain vs Supabase.</p>
       </div>
     </main>
 
