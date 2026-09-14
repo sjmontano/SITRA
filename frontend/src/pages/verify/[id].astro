@@ -5,6 +5,7 @@ const { id } = Astro.params; const data = await loadVerify(id);
 <h1>Custodia {id}</h1>
 <p>Custodio actual: {data.custodio}</p>
 <p>Hash evento coincide: {String(data.okEvento)}</p>
+<p>Hash PDF coincide: {String(data.okPDF)}</p>
 <p><small>Este registro NO afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</small></p>
 <ul>{data.onchain.map(e => <li>{e.eventType} {e.from} → {e.to} {e.timestamp}</li>)}</ul>
 <img src={`https://api.qrserver.com/v1/create-qr-code/?data=/verify/${id}`} alt="QR" />

@@ -14,8 +14,8 @@
 
 ## 4. Reglas transición
 - registerResource: DISPONIBLE, solo institución registrada.
-- executeTransfer: EN_CUSTODIA->TRANSFERIDO->EN_CUSTODIA (nuevo custodio=to).
-- returnResource: ->DEVUELTO, solo custodioActual + firma institución receptora.
+- executeTransfer: registra un único evento TRANSFERIDO y deja custodioActual=to (el estado se reconstruye del último evento).
+- returnResource: ->DEVUELTO, solo custodioActual (msg.sender == custodioActual), sin firma adicional.
 - retireResource: ->BAJA, requiere doble firma (custodio + institución rectora).
 - rotateInstitutionKey: solo con firma de llave anterior + firma de llave nueva (gobernanza dual, sin super-admin).
 
