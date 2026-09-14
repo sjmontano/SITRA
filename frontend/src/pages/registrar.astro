@@ -1,45 +1,108 @@
----
----
-<h1>Registrar recurso</h1>
-<form id="f">
-  <label>Destino (to, address)<br /><input id="to" placeholder="0x..." size="45" /></label><br />
-  <label>Acta JSON<br /><textarea id="acta" rows="8" cols="60" placeholder='{"item":"..."}'></textarea></label><br />
-  <label>pdfHash (0x + 64 hex)<br /><input id="pdfHash" placeholder="0x..." size="70" /></label><br />
-  <label>pdfUrl<br /><input id="pdfUrl" placeholder="https://..." size="60" /></label><br />
-  <button type="submit">Registrar</button>
-</form>
-<p id="out"></p>
-<nav><a href="/">Inicio</a></nav>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar recurso — SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/"><i class="fa-solid fa-arrow-left"></i> Inicio</a>
+    <a class="logo" href="/" aria-label="SITRA"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>
+    <a href="#verificar-link" id="toVerify">Verificar →</a>
+  </nav>
+  <div class="shell">
+    <p class="kicker">SITRA · Nuevo recurso</p>
+    <h1>Registrar recurso</h1>
+    <p class="desc">Ej. <strong>COMP-001</strong> portátil de Secretaría → Institución. Se calcula <code>hashEvento = keccak(acta)</code>, se genera un <code>resourceId</code> único y se ancla en <code>CustodyRegistry</code>. Nada se guarda sin doble huella.</p>
+    <div class="form-card">
+      <form id="f">
+        <div class="field">
+          <label for="nombre">Nombre / código del recurso</label>
+          <input id="nombre" placeholder="COMP-001 · Portátil Lenovo" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="to">Destino inicial — address institución receptora</label>
+          <input id="to" placeholder="0x..." spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="acta">Acta JSON canónica</label>
+          <textarea id="acta" rows="5" placeholder='{"item":"Portátil COMP-001","serie":"XYZ","entrega":"Secretaría → Inst A","fecha":"2026-09-14"}'></textarea>
+          <p class="hash-preview" id="prevHash">hashEvento: —</p>
+        </div>
+        <div class="field">
+          <label for="pdfHash">hashPDF (keccak del PDF, 0x + 64 hex)</label>
+          <input id="pdfHash" placeholder="0x..." spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="pdfUrl">pdfUrl (Supabase / IPFS)</label>
+          <input id="pdfUrl" placeholder="https://..." spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" type="submit" id="btn">Registrar en blockchain</button>
+          <button class="btn-ghost" type="button" id="btnDemo">Rellenar ejemplo</button>
+        </div>
+      </form>
+      <p class="out" id="out"></p>
+      <div class="qr-actions" id="afterLinks" style="display:none">
+        <a id="linkVerify" href="#">Ver acta + QR →</a>
+        <a id="linkTransfer" class="ghost" href="#">Transferir →</a>
+      </div>
+    </div>
+    <p class="oracle">SITRA no afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</p>
+  </div>
 <script type="module">
   import { keccakOf } from "../lib/transfer-sign.js";
-  import { ethers } from "https://esm.sh/ethers@6.13.0";
   const $ = (id) => document.getElementById(id);
+  const isAddr = (s) => /^0x[0-9a-fA-F]{40}$/.test(s || "");
   const isHash = (s) => /^0x[0-9a-fA-F]{64}$/.test(s || "");
+  const out = $("out");
+  const say = (msg, ok) => { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; };
+  $("acta").addEventListener("input", () => {
+    try { $("prevHash").textContent = "hashEvento: " + keccakOf($("acta").value || "{}"); }
+    catch { $("prevHash").textContent = "hashEvento: —"; }
+  });
+  $("btnDemo").addEventListener("click", () => {
+    $("nombre").value = "COMP-001 · Portátil";
+    $("to").value = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    $("acta").value = '{"item":"COMP-001","detalle":"Portátil","entrega":"Secretaría → Inst A","fecha":"2026-09-14"}';
+    $("pdfHash").value = "0x" + "ab".repeat(32);
+    $("pdfUrl").value = "https://example.com/actas/comp-001.pdf";
+    $("acta").dispatchEvent(new Event("input"));
+  });
   $("f").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const to = $("to").value.trim();
-    const acta = $("acta").value.trim();
-    const pdfHash = $("pdfHash").value.trim();
-    const pdfUrl = $("pdfUrl").value.trim();
-    if (!to || !acta || !pdfHash || !pdfUrl) { $("out").textContent = "error: todos los campos son requeridos"; return; }
-    if (!isHash(pdfHash)) { $("out").textContent = "error: pdfHash debe ser 0x-prefijo 66 chars"; return; }
+    const to = $("to").value.trim(), acta = $("acta").value.trim();
+    const pdfHash = $("pdfHash").value.trim(), pdfUrl = $("pdfUrl").value.trim();
+    const nombre = $("nombre").value.trim() || acta.slice(0, 40);
+    if (!to || !acta || !pdfHash || !pdfUrl) return say("error: todos los campos son requeridos", false);
+    if (!isAddr(to)) return say("error: 'to' debe ser address 0x + 40 hex", false);
+    if (!isHash(pdfHash)) return say("error: pdfHash debe ser 0x + 64 hex", false);
     let hashEvento, resourceId;
+    try { hashEvento = keccakOf(acta); resourceId = keccakOf(nombre + "|" + Date.now()); }
+    catch (err) { return say("error: " + String(err.message || err), false); }
+    $("btn").disabled = true; say("firmando y anclando en Amoy…", true);
     try {
-      hashEvento = keccakOf(acta);
-      resourceId = keccakOf(acta + Date.now());
-    } catch (err) { $("out").textContent = "error: " + String(err.message || err); return; }
-    if (!isHash(hashEvento) || !isHash(resourceId)) { $("out").textContent = "error: hash calculado inválido"; return; }
-    try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      const from = accounts[0];
-      void from; void ethers;
       const r = await fetch("/api/resources", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ resourceId, to, hashEvento, hashPDF: pdfHash, pdfUrl }),
       });
       const j = await r.json();
-      $("out").textContent = j.tx ? ("tx: " + j.tx) : ("error: " + (j.error || r.status));
-    } catch (err) { $("out").textContent = "error: " + String(err.message || err); }
+      if (j.tx) {
+        say("✅ registrado · tx: " + j.tx + " · resourceId: " + resourceId, true);
+        $("afterLinks").style.display = "flex";
+        $("linkVerify").href = "/verify/" + encodeURIComponent(resourceId);
+        $("linkTransfer").href = "/transferir/" + encodeURIComponent(resourceId);
+        $("toVerify").href = "/verify/" + encodeURIComponent(resourceId);
+      } else say("error: " + (j.error || r.status), false);
+    } catch (err) { say("error: " + String(err.message || err), false); }
+    finally { $("btn").disabled = false; }
   });
 </script>
+</body>
+</html>
