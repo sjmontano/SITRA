@@ -18,6 +18,7 @@ Thumbs.db
 # Builds (experimento 3 brazos / Task 6)
 frontend/dist/
 frontend/.astro/
+frontend/.vercel/
 dist/
 .astro/
 
