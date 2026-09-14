@@ -15,95 +15,207 @@
   <nav class="topbar">
     <a href="/"><i class="fa-solid fa-arrow-left"></i> Inicio</a>
     <a class="logo" href="/" aria-label="SITRA"><img src="/sitra.png" alt="SITRA" /></a>
-    <a href="#verificar-link" id="toVerify">Verificar →</a>
+    <span class="topbar-tabs"><a href="/registrar" class="on">Registrar</a> · <a href="/consultar">Consultar</a></span>
   </nav>
   <div class="shell">
-    <p class="kicker">SITRA · Nuevo recurso</p>
-    <h1>Registrar recurso</h1>
-    <p class="desc">Ej. <strong>COMP-001</strong> portátil de Secretaría → Institución. Se calcula <code>hashEvento = keccak(acta)</code>, se genera un <code>resourceId</code> único y se ancla en <code>CustodyRegistry</code>. Nada se guarda sin doble huella.</p>
+    <p class="kicker">SITRA · Paso 1 de 3 — Registrar</p>
+    <h1>Sube el archivo y listo</h1>
+    <p class="desc">Sube el archivo y elige quién lo recibe. El acta y los hashes <strong>se generan solos</strong>. Los recursos ya creados están en <a href="/consultar">Consultar</a>.</p>
     <div class="form-card">
       <form id="f">
         <div class="field">
-          <label for="nombre">Nombre / código del recurso</label>
-          <input id="nombre" placeholder="COMP-001 · Portátil Lenovo" autocomplete="off" />
+          <label for="pdfFile">1 · Sube el recurso (PDF, foto, acta escaneada)</label>
+          <input id="pdfFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.json,.txt" />
+          <p class="hash-preview" id="prevFile">Sin archivo todavía.</p>
         </div>
         <div class="field">
-          <label for="to">Destino inicial — address institución receptora</label>
-          <input id="to" placeholder="0x..." spellcheck="false" autocomplete="off" />
+          <label for="nombre">2 · Nombre del recurso (se llena solo, lo puedes corregir)</label>
+          <input id="nombre" placeholder="Se completa al subir el archivo…" autocomplete="off" />
         </div>
         <div class="field">
-          <label for="acta">Acta JSON canónica</label>
-          <textarea id="acta" rows="5" placeholder='{"item":"Portátil COMP-001","serie":"XYZ","entrega":"Secretaría → Inst A","fecha":"2026-09-14"}'></textarea>
-          <p class="hash-preview" id="prevHash">hashEvento: —</p>
+          <label for="destino">3 · ¿Quién lo recibe?</label>
+          <select id="destino">
+            <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" selected>Institución A — 0x7099…79C8 (demo)</option>
+            <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">Institución B — 0x3C44…93BC (demo)</option>
+            <option value="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266">Secretaría — 0xf39F…2266 (demo)</option>
+            <option value="otra">Otra billetera (pegar address…)</option>
+          </select>
+          <input id="toCustom" placeholder="0x… (40 hex)" spellcheck="false" autocomplete="off" style="display:none;margin-top:8px" />
+          <p class="hash-preview">Quedará registrada como <strong>custodia inicial</strong> del recurso. Para la demostración usa Institución A.</p>
         </div>
-        <div class="field">
-          <label for="pdfHash">hashPDF (keccak del PDF, 0x + 64 hex)</label>
-          <input id="pdfHash" placeholder="0x..." spellcheck="false" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label for="pdfUrl">pdfUrl (Supabase / IPFS)</label>
-          <input id="pdfUrl" placeholder="https://..." spellcheck="false" autocomplete="off" />
-        </div>
+        <details id="resumenBox" hidden>
+          <summary>Resumen del registro (generado automáticamente)</summary>
+          <p class="mono" id="resIndex">—</p>
+          <p class="mono" id="resData">—</p>
+          <p class="mono" id="resHashE">—</p>
+          <p class="mono" id="resHashP">—</p>
+          <div class="field">
+            <label for="acta">Acta</label>
+            <textarea id="acta" rows="4" readonly></textarea>
+          </div>
+          <div class="field">
+            <label for="pdfHash">hashPDF</label>
+            <input id="pdfHash" readonly spellcheck="false" />
+          </div>
+        </details>
         <div class="btn-row">
           <button class="btn-primary" type="submit" id="btn">Registrar en blockchain</button>
-          <button class="btn-ghost" type="button" id="btnDemo">Rellenar ejemplo</button>
         </div>
       </form>
       <p class="out" id="out"></p>
       <div class="qr-actions" id="afterLinks" style="display:none">
-        <a id="linkVerify" href="#">Ver acta + QR →</a>
-        <a id="linkTransfer" class="ghost" href="#">Transferir →</a>
+        <a id="linkConsultar" href="#">Consultar desglose →</a>
+        <a id="linkVerify" href="#">Verificar + QR →</a>
       </div>
     </div>
-    <p class="oracle">SITRA no afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</p>
+    <p class="oracle">Flujo: <strong>Registrar → <a href="/consultar">Consultar</a> (desglose + lista) → Verificar (prueba)</strong>. Sin backend configurado se guarda en modo demo local y todo el flujo sigue funcionando.</p>
   </div>
-<script type="module">
-  import { keccakOf } from "../lib/transfer-sign.js";
-  const $ = (id) => document.getElementById(id);
-  const isAddr = (s) => /^0x[0-9a-fA-F]{40}$/.test(s || "");
-  const isHash = (s) => /^0x[0-9a-fA-F]{64}$/.test(s || "");
-  const out = $("out");
-  const say = (msg, ok) => { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; };
-  $("acta").addEventListener("input", () => {
-    try { $("prevHash").textContent = "hashEvento: " + keccakOf($("acta").value || "{}"); }
-    catch { $("prevHash").textContent = "hashEvento: —"; }
-  });
-  $("btnDemo").addEventListener("click", () => {
-    $("nombre").value = "COMP-001 · Portátil";
-    $("to").value = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-    $("acta").value = '{"item":"COMP-001","detalle":"Portátil","entrega":"Secretaría → Inst A","fecha":"2026-09-14"}';
-    $("pdfHash").value = "0x" + "ab".repeat(32);
-    $("pdfUrl").value = "https://example.com/actas/comp-001.pdf";
-    $("acta").dispatchEvent(new Event("input"));
-  });
-  $("f").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const to = $("to").value.trim(), acta = $("acta").value.trim();
-    const pdfHash = $("pdfHash").value.trim(), pdfUrl = $("pdfUrl").value.trim();
-    const nombre = $("nombre").value.trim() || acta.slice(0, 40);
-    if (!to || !acta || !pdfHash || !pdfUrl) return say("error: todos los campos son requeridos", false);
-    if (!isAddr(to)) return say("error: 'to' debe ser address 0x + 40 hex", false);
-    if (!isHash(pdfHash)) return say("error: pdfHash debe ser 0x + 64 hex", false);
-    let hashEvento, resourceId;
-    try { hashEvento = keccakOf(acta); resourceId = keccakOf(nombre + "|" + Date.now()); }
-    catch (err) { return say("error: " + String(err.message || err), false); }
-    $("btn").disabled = true; say("firmando y anclando en Amoy…", true);
-    try {
-      const r = await fetch("/api/resources", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ resourceId, to, hashEvento, hashPDF: pdfHash, pdfUrl }),
+  <script is:inline src="/sitra-hash.js"></script>
+  <script is:inline>
+  (function () {
+    "use strict";
+    function $(id) { return document.getElementById(id); }
+    var out = $("out");
+    function say(msg, ok) {
+      out.className = "out show " + (ok ? "ok" : "err");
+      out.textContent = msg;
+    }
+    window.addEventListener("error", function (e) {
+      say("error inesperado: " + (e.message || e.error), false);
+    });
+    if (!window.SitraHash) { say("error: no cargo sitra-hash.js (revisa /public).", false); return; }
+
+    var fileReady = false, fileBytes = null, fileName = "", lastTo = "";
+    var isAddr = function (s) { return /^0x[0-9a-fA-F]{40}$/.test(s || ""); };
+
+    function currentTo() {
+      var v = $("destino").value;
+      if (v === "otra") return $("toCustom").value.trim();
+      return v;
+    }
+    function currentToName() {
+      var sel = $("destino");
+      if (sel.value === "otra") return "Billetera personalizada";
+      return sel.options[sel.selectedIndex].text.split(" — ")[0];
+    }
+    $("destino").addEventListener("change", function () {
+      $("toCustom").style.display = $("destino").value === "otra" ? "block" : "none";
+      if (fileReady) rebuildActa();
+    });
+    $("toCustom").addEventListener("input", function () { if (fileReady) rebuildActa(); });
+
+    function refreshHash() {
+      try { $("resHashE").textContent = "hashEvento: " + window.SitraHash.keccakOf($("acta").value || "{}"); }
+      catch (e) { $("resHashE").textContent = "hashEvento: —"; }
+    }
+
+    function rebuildActa() {
+      var base = ($("nombre").value.trim() || fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ") || "RECURSO").slice(0, 60);
+      $("nombre").value = base;
+      var fecha = new Date().toISOString().slice(0, 10);
+      var toName = currentToName();
+      $("acta").value = window.SitraHash.buildActaCanonica({
+        item: base + " | " + fileName + " | " + (fileBytes ? (fileBytes.length / 1024).toFixed(1) + " KB" : ""),
+        entrega: "Secretaria -> " + toName,
+        fecha: fecha,
+        responsable_recibe: toName
       });
-      const j = await r.json();
-      if (j.tx) {
-        say("✅ registrado · tx: " + j.tx + " · resourceId: " + resourceId, true);
+      refreshHash();
+      var hP = $("pdfHash").value;
+      $("resIndex").textContent = "index: 0 (génesis) · date: " + fecha;
+      $("resData").textContent = "data: " + base + " -> " + toName;
+      $("resHashP").textContent = "hashPDF: " + hP;
+      $("resumenBox").hidden = false;
+      lastTo = currentTo();
+    }
+
+    $("pdfFile").addEventListener("change", function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) { fileReady = false; $("prevFile").textContent = "Sin archivo todavía."; $("resumenBox").hidden = true; return; }
+      $("prevFile").textContent = "Leyendo " + f.name + " (" + (f.size / 1024).toFixed(1) + " KB)…";
+      var reader = new FileReader();
+      reader.onerror = function () { fileReady = false; say("No se pudo leer el archivo.", false); };
+      reader.onload = function () {
+        try {
+          fileBytes = new Uint8Array(reader.result);
+          fileName = f.name;
+          var hPDF = window.SitraHash.keccakOfBytes(fileBytes);
+          $("pdfHash").value = hPDF;
+          rebuildActa();
+          fileReady = true;
+          $("prevFile").textContent = "Archivo listo: " + f.name + ". Revisa el resumen y pulsa Registrar.";
+          say("Archivo listo. Revisa nombre y destino, luego pulsa Registrar.", true);
+        } catch (err) { fileReady = false; say("error: " + String((err && err.message) || err), false); }
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    $("nombre").addEventListener("input", function () { if (fileReady) rebuildActa(); });
+
+    function saveLocal(item) {
+      try {
+        var raw = localStorage.getItem("sitra-recursos");
+        var arr = raw ? JSON.parse(raw) : [];
+        arr = arr.filter(function (x) { return x.resourceId !== item.resourceId; });
+        arr.unshift(item);
+        localStorage.setItem("sitra-recursos", JSON.stringify(arr.slice(0, 50)));
+      } catch (e) { /* almacenamiento lleno o bloqueado: no fatal */ }
+    }
+
+    $("f").addEventListener("submit", function (e) {
+      e.preventDefault();
+      say("Procesando…", true);
+      if (!fileReady) { say("Paso 1: sube primero el archivo.", false); return; }
+      var to = currentTo();
+      if (!isAddr(to)) { say("Paso 3: elige un destino válido o pega un address 0x + 40 hex.", false); $("toCustom").focus(); return; }
+      var acta = $("acta").value.trim(), pdfHash = $("pdfHash").value.trim();
+      var nombre = $("nombre").value.trim() || "RECURSO";
+      var hashEvento, resourceId;
+      try {
+        hashEvento = window.SitraHash.keccakOf(acta);
+        resourceId = window.SitraHash.keccakOf(nombre + "|" + Date.now());
+      } catch (err) { say("error: " + String((err && err.message) || err), false); return; }
+      var pdfUrl = fileName;
+      var btn = $("btn");
+      btn.disabled = true;
+      say("Anclando bloque génesis…", true);
+      fetch("/api/resources", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resourceId: resourceId, to: to, hashEvento: hashEvento, hashPDF: pdfHash, pdfUrl: pdfUrl })
+      }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (res) {
+        var item = {
+          resourceId: resourceId, nombre: nombre, to: to, toNombre: currentToName(),
+          hashEvento: hashEvento, hashPDF: pdfHash, pdfUrl: pdfUrl,
+          fecha: new Date().toISOString(), acta: acta, tx: (res.body && res.body.tx) || null,
+          demo: !(res.body && res.body.tx)
+        };
+        saveLocal(item);
+        if (res.body && res.body.tx) {
+          say("✅ Registrado on-chain · tx: " + res.body.tx, true);
+        } else {
+          say("✅ Guardado en modo demo local (backend sin configurar: " + ((res.body && res.body.error) || res.status) + "). El flujo Consultar → Verificar funciona igual.", true);
+        }
         $("afterLinks").style.display = "flex";
+        $("linkConsultar").href = "/consultar?id=" + encodeURIComponent(resourceId);
         $("linkVerify").href = "/verify/" + encodeURIComponent(resourceId);
-        $("linkTransfer").href = "/transferir/" + encodeURIComponent(resourceId);
-        $("toVerify").href = "/verify/" + encodeURIComponent(resourceId);
-      } else say("error: " + (j.error || r.status), false);
-    } catch (err) { say("error: " + String(err.message || err), false); }
-    finally { $("btn").disabled = false; }
-  });
-</script>
+      })
+      .catch(function (err) {
+        var item = {
+          resourceId: resourceId, nombre: nombre, to: to, toNombre: currentToName(),
+          hashEvento: hashEvento, hashPDF: pdfHash, pdfUrl: pdfUrl,
+          fecha: new Date().toISOString(), acta: acta, tx: null, demo: true
+        };
+        saveLocal(item);
+        say("✅ Guardado en modo demo local (sin conexión al backend). El flujo Consultar → Verificar funciona igual.", true);
+        $("afterLinks").style.display = "flex";
+        $("linkConsultar").href = "/consultar?id=" + encodeURIComponent(resourceId);
+        $("linkVerify").href = "/verify/" + encodeURIComponent(resourceId);
+      })
+      .then(function () { btn.disabled = false; });
+    });
+  })();
+  </script>
 </body>
 </html>

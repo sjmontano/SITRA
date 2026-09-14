@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consultar recurso — SITRA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" type="image/png" href="/sitra.png" />
+</head>
+<body>
+  <div class="bg"><div class="bg-overlay"></div></div>
+  <nav class="topbar">
+    <a href="/"><i class="fa-solid fa-arrow-left"></i> Inicio</a>
+    <a class="logo" href="/" aria-label="SITRA"><img src="/sitra.png" alt="SITRA" /></a>
+    <span class="topbar-tabs"><a href="/registrar">Registrar</a> · <a href="/consultar" class="on">Consultar</a></span>
+  </nav>
+  <div class="shell shell-wide">
+    <p class="kicker">SITRA · Paso 2 de 3 — Consultar</p>
+    <h1>Recursos y desglose</h1>
+    <p class="desc">Aquí aparecen <strong>los ya creados</strong>. Toca uno para ver su desglose estilo Bloque de clase (<code>index · date · data · hash</code>) y luego ir a <strong>Verificar</strong>. ¿Aún no hay ninguno? <a href="/registrar">Registra el primero →</a></p>
+
+    <h3 style="margin:12px 0 8px">Ya creados</h3>
+    <div class="chain-links" id="lista"><p class="desc">Cargando…</p></div>
+
+    <h3 style="margin:16px 0 8px">Buscar por ID</h3>
+    <div class="form-card">
+      <form id="f" class="lookup" onsubmit="return false">
+        <input id="rid" placeholder="resourceId (0x…)" spellcheck="false" autocomplete="off" style="flex:1" />
+        <button type="submit" class="btn-primary" id="btn">Consultar</button>
+      </form>
+      <p class="out" id="out"></p>
+      <div class="badges" id="badges" style="margin-top:8px"></div>
+    </div>
+    <div class="chain-links" id="chain"></div>
+    <div class="form-card" id="nextCard" hidden>
+      <p class="desc"><strong>¿Todo se ve bien?</strong> El paso 3 comprueba que el archivo original produce el mismo hash anclado.</p>
+      <div class="qr-actions">
+        <a id="goVerify" href="#">Ir a verificar + QR →</a>
+        <a id="goTransfer" class="ghost" href="#">Transferir →</a>
+      </div>
+    </div>
+    <p class="oracle">Mapa con la clase del profe: <code>index</code> = posición del evento · <code>date</code> = timestamp · <code>data</code> = tipo + from → to · <code>hash</code> = hashEvento + hashPDF · <code>previous_hash</code> = evento anterior del mismo recurso.</p>
+  </div>
+<script is:inline>
+(function () {
+  "use strict";
+  function $(id) { return document.getElementById(id); }
+  var out = $("out"), chain = $("chain"), badges = $("badges"), lista = $("lista");
+  var nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
+  function say(msg, ok) { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; }
+  function fmtDate(ts) {
+    var n = Number(ts);
+    if (!n) return String(ts === undefined || ts === null ? "—" : ts);
+    return new Date(n * 1000).toLocaleString("es-CO");
+  }
+  function short(s) { s = String(s || ""); return s.length > 18 ? s.slice(0, 10) + "…" + s.slice(-6) : s; }
+  function esc(s) { return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function localItems() {
+    try {
+      var raw = localStorage.getItem("sitra-recursos");
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function findLocal(id) {
+    var arr = localItems();
+    for (var i = 0; i < arr.length; i++) if (arr[i].resourceId === id) return arr[i];
+    return null;
+  }
+
+  function card(item, isLocal) {
+    var d = document.createElement("article");
+    d.className = "block-card";
+    var title = esc(item.nombre || item.pdfUrl || item.pdf_url || "Recurso");
+    var cust = esc(item.toNombre || item.to || "—");
+    var fecha = esc(item.fecha ? String(item.fecha).slice(0, 16).replace("T", " ") : "on-chain");
+    var badge = isLocal
+      ? (item.tx ? '<span class="badge ok">on-chain</span>' : '<span class="badge">demo local</span>')
+      : '<span class="badge ok">on-chain</span>';
+    d.innerHTML =
+      '<p class="block-title">' + title + ' ' + badge + '</p>' +
+      '<p class="mono">id<br/>' + esc(item.resourceId || item.resource_id) + '</p>' +
+      '<p class="mono">custodio: ' + cust + ' · ' + fecha + '</p>' +
+      '<div class="qr-actions"><a href="/consultar?id=' + encodeURIComponent(item.resourceId || item.resource_id) + '">Ver desglose →</a>' +
+      '<a class="ghost" href="/verify/' + encodeURIComponent(item.resourceId || item.resource_id) + '">Verificar →</a></div>';
+    return d;
+  }
+
+  function renderLista(apiItems) {
+    lista.innerHTML = "";
+    var seen = {};
+    var all = [];
+    localItems().forEach(function (x) { seen[x.resourceId] = 1; all.push({ item: x, local: true }); });
+    (apiItems || []).forEach(function (r) {
+      var id = r.resource_id;
+      if (seen[id]) return;
+      seen[id] = 1;
+      all.push({ item: { resourceId: id, nombre: r.pdf_url, pdfUrl: r.pdf_url, to: "", toNombre: "", fecha: "" }, local: false });
+    });
+    if (!all.length) {
+      lista.innerHTML = '<div class="form-card"><p class="desc">Aún no hay recursos. <a href="/registrar">Sube el primero en Registrar →</a></p></div>';
+      return;
+    }
+    all.forEach(function (e) { lista.appendChild(card(e.item, e.local)); });
+  }
+
+  fetch("/api/resources/list").then(function (r) { return r.json(); })
+    .then(function (j) { renderLista(j.items || []); })
+    .catch(function () { renderLista([]); });
+
+  function paintEvents(id, evs, off) {
+    chain.innerHTML = ""; badges.innerHTML = "";
+    var last = evs[evs.length - 1];
+    var okE = off && String(off.hash_evento).toLowerCase() === String(last.hashEvento).toLowerCase();
+    var okP = off && String(off.hash_pdf).toLowerCase() === String(last.hashPDF).toLowerCase();
+    [["Custodio: " + last.to, "ok"],
+     [(okE ? "✅" : "❌") + " evento coincide", okE ? "ok" : "bad"],
+     [(okP ? "✅" : "❌") + " PDF coincide", okP ? "ok" : "bad"]
+    ].forEach(function (b) {
+      var s = document.createElement("span"); s.className = "badge " + b[1]; s.textContent = b[0]; badges.appendChild(s);
+    });
+    evs.forEach(function (e, i) {
+      var prev = i === 0 ? "(vacío · es el génesis del recurso)" : evs[i - 1].hashEvento;
+      var c = document.createElement("article"); c.className = "block-card";
+      c.innerHTML =
+        '<p class="block-title">Bloque #' + i + ' · ' + esc(nombres[e.eventType] !== undefined ? nombres[e.eventType] : e.eventType) + '</p>' +
+        '<div class="block-grid">' +
+        '<div><span>index</span><strong>' + i + '</strong></div>' +
+        '<div><span>date</span><strong class="mono">' + esc(fmtDate(e.timestamp)) + '</strong></div>' +
+        '<div><span>data</span><strong>' + esc(e.from) + ' → ' + esc(e.to) + '</strong></div></div>' +
+        '<p class="mono">previous_hash<br/>' + esc(prev) + '</p>' +
+        '<p class="mono">hashEvento (hash del bloque)<br/>' + esc(e.hashEvento) + '</p>' +
+        '<p class="mono">hashPDF (huella del archivo)<br/>' + esc(e.hashPDF) + '</p>' +
+        (off && i === evs.length - 1 ? '<p class="mono">off-chain · ' + esc(off.pdf_url) + '<br/>' + esc(off.hash_evento) + '<br/>' + esc(off.hash_pdf) + '</p>' : "");
+      chain.appendChild(c);
+      if (i < evs.length - 1) {
+        var link = document.createElement("div"); link.className = "chain-link";
+        link.innerHTML = "<span>▼ el siguiente bloque hereda este hash (previous_hash)</span>";
+        chain.appendChild(link);
+      }
+    });
+    $("goVerify").href = "/verify/" + encodeURIComponent(id);
+    $("goTransfer").href = "/transferir/" + encodeURIComponent(id);
+    $("nextCard").hidden = false;
+    try { history.replaceState(null, "", "/consultar?id=" + encodeURIComponent(id)); } catch (e) {}
+  }
+
+  function consultar(id) {
+    chain.innerHTML = ""; badges.innerHTML = ""; $("nextCard").hidden = true;
+    if (!id) { say("Pega el resourceId o toca un recurso de la lista.", false); return; }
+    say("Buscando bloques…", true);
+    fetch("/api/resources/verify/" + encodeURIComponent(id)).then(function (r) { return r.json(); })
+      .then(function (j) {
+        var evs = j.onchain || [];
+        if (evs.length) { say("✅ " + evs.length + " bloque(s) on-chain.", true); paintEvents(id, evs, j.offchain || null); return; }
+        var loc = findLocal(id);
+        if (loc) {
+          say("✅ Bloque demo local (sin backend on-chain).", true);
+          paintEvents(id, [{
+            eventType: 0, from: "0x0000000000000000000000000000000000000000",
+            to: loc.to, hashEvento: loc.hashEvento, hashPDF: loc.hashPDF,
+            timestamp: String(Math.floor(new Date(loc.fecha).getTime() / 1000) || "")
+          }], { pdf_url: loc.pdfUrl, hash_evento: loc.hashEvento, hash_pdf: loc.hashPDF });
+          return;
+        }
+        say("Sin bloques para este ID. Revisa el resourceId o registra primero.", false);
+      })
+      .catch(function () {
+        var loc = findLocal(id);
+        if (loc) {
+          say("✅ Bloque demo local (sin conexión al backend).", true);
+          paintEvents(id, [{
+            eventType: 0, from: "0x0000000000000000000000000000000000000000",
+            to: loc.to, hashEvento: loc.hashEvento, hashPDF: loc.hashPDF,
+            timestamp: String(Math.floor(new Date(loc.fecha).getTime() / 1000) || "")
+          }], { pdf_url: loc.pdfUrl, hash_evento: loc.hashEvento, hash_pdf: loc.hashPDF });
+        } else say("Sin conexión al backend y el ID no está en demo local.", false);
+      });
+  }
+
+  $("f").addEventListener("submit", function () { consultar($("rid").value.trim()); });
+  var q = null;
+  try { q = new URLSearchParams(location.search).get("id"); } catch (e) {}
+  if (q) { $("rid").value = q; consultar(q); }
+})();
+</script>
+</body>
+</html>

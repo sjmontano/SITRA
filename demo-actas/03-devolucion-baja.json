@@ -1,0 +1,11 @@
+{
+  "item": "COMP-001",
+  "detalle": "Portatil Lenovo ThinkPad E14, serie XYZ-001",
+  "entrega": "Institucion Educativa B -> Bodega Secretaria (devolucion)",
+  "fecha": "2026-09-20",
+  "responsable_entrega": "Institucion B",
+  "responsable_recibe": "Secretaria",
+  "estado_acta": "DEVOLUCION",
+  "motivo": "Fin de periodo, equipo devuelto para mantenimiento",
+  "observaciones": "Teclado con una tecla floja, pasa a revision"
+}

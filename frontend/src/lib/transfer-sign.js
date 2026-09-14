@@ -14,3 +14,9 @@ export function keccakOf(obj) {
   const s = typeof obj === "string" ? obj : JSON.stringify(obj);
   return ethers.keccak256(ethers.toUtf8Bytes(s));
 }
+export function keccakOfBytes(u8) {
+  return ethers.keccak256(u8);
+}
+export function buildActaCanonica({ item, entrega, fecha, responsable_entrega, responsable_recibe, estado_acta }) {
+  return JSON.stringify({ detalle: item, entrega, estado_acta: estado_acta || "ENTREGA", fecha, item: item.split("·")[0].trim(), observaciones: "", responsable_entrega: responsable_entrega || "Secretaría", responsable_recibe: responsable_recibe || "Institución A" });
+}

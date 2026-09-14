@@ -44,9 +44,19 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const btnVerify = document.getElementById("btnVerify");
   const btnTransfer = document.getElementById("btnTransfer");
+  const btnConsultar = document.getElementById("btnConsultar");
   if (btnVerify) btnVerify.addEventListener("click", () => go("/verify/"));
   if (btnTransfer) btnTransfer.addEventListener("click", () => go("/transferir/"));
-  if (rid) rid.addEventListener("keydown", (e) => { if (e.key === "Enter") go("/verify/"); });
+  if (btnConsultar) btnConsultar.addEventListener("click", () => {
+    const v = (rid && rid.value || "").trim();
+    if (!v) { if (rid) rid.focus(); return; }
+    window.location.href = "/consultar?id=" + encodeURIComponent(v);
+  });
+  if (rid) rid.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const v = (rid.value || "").trim();
+    if (v) window.location.href = "/consultar?id=" + encodeURIComponent(v);
+  });
 
   // Mobile menu toggle (if exists)
   const menu = document.getElementById("mobileMenu");

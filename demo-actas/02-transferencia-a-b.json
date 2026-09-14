@@ -1,0 +1,11 @@
+{
+  "item": "COMP-001",
+  "detalle": "Portatil Lenovo ThinkPad E14, serie XYZ-001",
+  "entrega": "Institucion Educativa A -> Institucion Educativa B",
+  "fecha": "2026-09-14",
+  "responsable_entrega": "Institucion A",
+  "responsable_recibe": "Institucion B",
+  "estado_acta": "TRANSFERENCIA",
+  "motivo": "Traslado por matricula, acta firmada por ambas partes",
+  "observaciones": "Equipo en buen estado, sin rayones"
+}

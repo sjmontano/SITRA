@@ -30,7 +30,7 @@
       <nav class="nav" aria-label="Principal">
         <a href="/" class="nav-link active">Inicio</a>
         <a href="#como-funciona" class="nav-link">Cómo funciona</a>
-        <a href="/laboratorio/minar" class="nav-link">Laboratorio</a>
+        <a href="/consultar" class="nav-link">Consultar</a>
         <a href="#verificar" class="nav-link">Verificar</a>
       </nav>
       <a href="/registrar" class="sign-in">Registrar</a>
@@ -69,14 +69,14 @@
       </div>
 
       <div class="hero-actions anim" style="--d: 0.4s">
-        <a href="/registrar" class="cta">Registrar recurso</a>
-        <a href="/laboratorio/minar" class="btn-ghost">⛏️ Laboratorio</a>
+        <a href="/registrar" class="cta">1 · Registrar (sube archivo)</a>
+        <a href="/consultar" class="btn-ghost">2 · Consultar desglose</a>
         <form class="lookup" id="verificar" onsubmit="return false">
-          <input id="resourceId" placeholder="resourceId (0x… ej. hash de COMP-001)" spellcheck="false" autocomplete="off" />
-          <button type="button" class="btn-ghost" id="btnVerify">Verificar</button>
+          <input id="resourceId" placeholder="resourceId (0x…) — pégalo aquí" spellcheck="false" autocomplete="off" />
+          <button type="button" class="btn-ghost" id="btnConsultar">Consultar</button>
+          <button type="button" class="btn-ghost" id="btnVerify">3 · Verificar</button>
           <button type="button" class="btn-ghost" id="btnTransfer">Transferir</button>
         </form>
-        <p class="lookup-hint">Verificación pública: <code>GET /verify/:id</code> compara hash on-chain vs Supabase.</p>
       </div>
     </main>
 
@@ -179,13 +179,23 @@
     </div>
   </section>
 
+  <section class="info" id="laboratorio">
+    <div class="info-inner">
+      <p class="kicker">Anexo</p>
+      <h2>Laboratorio: cómo se encadena un bloque</h2>
+      <p class="lede">Réplica del ejercicio de clase para ver por dentro <code>index · date · data · hash</code> y por qué al alterar un bloque se rompe la cadena.</p>
+      <div class="cta-row">
+        <a class="btn-ghost" href="/laboratorio/minar">Abrir laboratorio →</a>
+      </div>
+    </div>
+  </section>
+
   <footer class="bottom">SITRA · Trazabilidad de actas con cadena de custodia y autorización dual · <code>CustodyRegistry.sol</code> · <code>GET /verify/:id</code></footer>
 
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
     <div class="menu-sheet">
       <a href="/" class="menu-link active">Inicio</a>
       <a href="#como-funciona" class="menu-link">Cómo funciona</a>
-      <a href="/laboratorio/minar" class="menu-link">⛏️ Laboratorio</a>
       <a href="#verificar" class="menu-link">Verificar</a>
       <a href="/registrar" class="menu-link sign-in-full">Registrar</a>
     </div>

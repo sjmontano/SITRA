@@ -9,6 +9,7 @@ let qr = "";
 try { qr = await QRCode.toDataURL(url, { margin: 1, width: 280 }); } catch { qr = ""; }
 const last = data.onchain[data.onchain.length - 1];
 const nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
+const fmtDate = (ts) => { const n = Number(ts); if (!n) return String(ts ?? "—"); try { return new Date(n * 1000).toLocaleString("es-CO"); } catch { return String(ts); } };
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -25,31 +26,40 @@ const nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
 <body>
   <div class="bg"><div class="bg-overlay"></div></div>
   <nav class="topbar">
-    <a class="logo" href="/" aria-label="SITRA"><img src="/sitra.png" alt="SITRA" /></a>
+    <a href="/" aria-label="SITRA"><img src="/sitra.png" alt="SITRA" class="logo" /></a>
     <a href="/">← Inicio</a>
+    <span class="topbar-tabs"><a href="/registrar">Registrar</a> · <a href={`/consultar?id=${id}`}>Consultar</a> · <span class="on">Verificar</span></span>
     <a href={`/transferir/${id}`}>Transferir →</a>
   </nav>
-  <div class="shell">
-    <p class="kicker">SITRA · Verificación pública</p>
-    <h1>Custodia verificable</h1>
+  <div class="shell shell-wide">
+    <p class="kicker">SITRA · Paso 3 de 3 — Verificar</p>
+    <h1>¿Este archivo es el original?</h1>
     <p class="mono">resourceId<br />{id}</p>
     <div class="badges">
       <span class={`badge ${data.custodio ? "ok" : "bad"}`}>Custodio: {data.custodio ?? "no encontrado"}</span>
-      <span class={`badge ${data.okEvento ? "ok" : "bad"}`}>{data.okEvento ? "✅" : "❌"} hash evento coincide</span>
-      <span class={`badge ${data.okPDF ? "ok" : "bad"}`}>{data.okPDF ? "✅" : "❌"} hash PDF coincide</span>
-      <span class="badge">{data.onchain.length} evento(s)</span>
+      <span class={`badge ${data.okEvento ? "ok" : "bad"}`}>{data.okEvento ? "✅" : "❌"} evento coincide</span>
+      <span class={`badge ${data.okPDF ? "ok" : "bad"}`}>{data.okPDF ? "✅" : "❌"} PDF coincide</span>
+      <span class="badge">{data.onchain.length} bloque(s)</span>
     </div>
+    <div class="chain-links" id="localChain"></div>
     {data.onchain.length === 0 ? (
-      <div class="form-card"><p class="desc">Sin eventos on-chain para este ID. Revisa el resourceId o la red Amoy.</p></div>
+      <div class="form-card" id="emptyCard"><p class="desc">Sin bloques on-chain para este ID. <a href={`/consultar?id=${id}`}>Vuelve a consultar</a> o revisa la red Amoy. Si lo registraste en modo demo, aparecerá aquí abajo.</p></div>
     ) : (
-      <ul class="timeline">
+      <div class="chain-links">
         {data.onchain.map((e, i) => (
-          <li>
-            <strong>#{i + 1} · {nombres[e.eventType] ?? e.eventType}</strong> · {e.from} → {e.to}<br />
-            <span class="mono">hE {e.hashEvento}<br />hP {e.hashPDF}<br />ts {e.timestamp}</span>
-          </li>
+          <article class="block-card">
+            <p class="block-title">Bloque #{i} · {nombres[e.eventType] ?? e.eventType}</p>
+            <div class="block-grid">
+              <div><span>index</span><strong>{i}</strong></div>
+              <div><span>date</span><strong class="mono">{fmtDate(e.timestamp)}</strong></div>
+              <div><span>data</span><strong>{e.from} → {e.to}</strong></div>
+            </div>
+            <p class="mono">previous_hash<br />{i === 0 ? "(vacío · génesis del recurso)" : data.onchain[i - 1].hashEvento}</p>
+            <p class="mono">hashEvento<br />{e.hashEvento}</p>
+            <p class="mono">hashPDF<br />{e.hashPDF}</p>
+          </article>
         ))}
-      </ul>
+      </div>
     )}
     {data.offchain && (
       <div class="form-card">
@@ -57,17 +67,26 @@ const nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
         <p class="mono">hash_evento: {data.offchain.hash_evento}<br />hash_pdf: {data.offchain.hash_pdf}</p>
       </div>
     )}
+    <div class="form-card">
+      <p class="desc"><strong>Prueba final (como <code>hash.startswith(difficulty)</code> en clase, pero comparando huellas).</strong> Sube el archivo original: calculamos su <code>keccak256</code> aquí mismo y lo comparamos con el bloque. Si coincide, nadie lo alteró.</p>
+      <div class="field">
+        <label for="checkFile">Subir archivo a comprobar</label>
+        <input id="checkFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.json,.txt" />
+        <p class="hash-preview" id="checkOut">Sin archivo.</p>
+      </div>
+    </div>
     <div class="qr-box">
       {qr ? <img src={qr} alt="QR verificación SITRA" width="140" height="140" /> : <p>QR no disponible</p>}
-      <p><strong>Acta + QR.</strong> Escanea para abrir esta verificación en cualquier dispositivo. El QR apunta a esta URL pública.<br /><span class="mono">{url}</span>
+      <p><strong>Acta + QR.</strong> Escanea para abrir esta verificación en cualquier dispositivo.<br /><span class="mono">{url}</span>
         <span class="qr-actions">
           <button id="btnCopy" type="button">Copiar link</button>
           <button id="btnDl" type="button" class="ghost">Descargar QR</button>
+          <a href={`/consultar?id=${id}`}>Ver desglose →</a>
           <a href={`/transferir/${id}`}>Transferir →</a>
         </span>
       </p>
     </div>
-    <p class="oracle">Este registro NO afirma verdad física ni localización. Solo prueba doble firma en orden append-only.</p>
+    <p class="oracle">Como en el Python del profe: si cambias una letra del <code>data</code>, el <code>hash</code> cambia y la cadena se rompe. Aquí igual: archivo alterado = hash distinto = ❌ no coincide.</p>
   </div>
   <script is:inline define:vars={{ url, qr }}>
     document.getElementById("btnCopy")?.addEventListener("click", async () => {
@@ -78,6 +97,55 @@ const nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
       if (!qr) return;
       const a = document.createElement("a"); a.href = qr; a.download = "sitra-qr.png"; a.click();
     });
+  </script>
+  <script is:inline src="/sitra-hash.js"></script>
+  <script is:inline define:vars={{ rid: id, expected: last?.hashPDF ?? "", offExpected: data.offchain?.hash_pdf ?? "", hasChain: data.onchain.length > 0 }}>
+    (function () {
+      var input = document.getElementById("checkFile");
+      var out = document.getElementById("checkOut");
+      var exp = expected, offExp = offExpected;
+      // Fallback demo local: si no hay bloques on-chain, buscar en este navegador
+      if (!hasChain) {
+        try {
+          var arr = JSON.parse(localStorage.getItem("sitra-recursos") || "[]");
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].resourceId === rid) {
+              exp = arr[i].hashPDF; offExp = arr[i].hashPDF;
+              var box = document.getElementById("localChain");
+              var c = document.createElement("article"); c.className = "block-card";
+              var dt = "";
+              try { dt = new Date(arr[i].fecha).toLocaleString("es-CO"); } catch (e) { dt = arr[i].fecha || ""; }
+              c.innerHTML = "<p class='block-title'>Bloque #0 · REGISTRO <span class='badge'>demo local</span></p>" +
+                "<p class='mono'>date<br/>" + dt + "</p>" +
+                "<p class='mono'>data<br/>→ " + arr[i].to + "</p>" +
+                "<p class='mono'>hashEvento<br/>" + arr[i].hashEvento + "</p>" +
+                "<p class='mono'>hashPDF<br/>" + arr[i].hashPDF + "</p>";
+              box.appendChild(c);
+              var empty = document.getElementById("emptyCard");
+              if (empty) empty.querySelector(".desc").textContent = "Modo demo local: este recurso vive en tu navegador (sin backend on-chain). Valídalo abajo.";
+              break;
+            }
+          }
+        } catch (e) { /* sin demo local */ }
+      }
+      if (!window.SitraHash) { if (out) out.textContent = "error: no cargo sitra-hash.js"; return; }
+      if (input) input.addEventListener("change", function (e) {
+        var f = e.target.files && e.target.files[0];
+        if (!f) { if (out) out.textContent = "Sin archivo."; return; }
+        if (out) out.textContent = "Calculando keccak de " + f.name + "…";
+        var reader = new FileReader();
+        reader.onerror = function () { if (out) out.textContent = "No se pudo leer el archivo."; };
+        reader.onload = function () {
+          try {
+            var h = window.SitraHash.keccakOfBytes(new Uint8Array(reader.result));
+            var okChain = exp && h.toLowerCase() === String(exp).toLowerCase();
+            var okOff = offExp && h.toLowerCase() === String(offExp).toLowerCase();
+            if (out) out.textContent = (okChain ? "✅ coincide — archivo íntegro" : "❌ NO coincide — archivo alterado o distinto") + " · " + h + (offExp ? (okOff ? " · ✅ off-chain" : " · ❌ difiere off-chain") : "");
+          } catch (err) { if (out) out.textContent = "No se pudo hashear: " + String((err && err.message) || err); }
+        };
+        reader.readAsArrayBuffer(f);
+      });
+    })();
   </script>
 </body>
 </html>
