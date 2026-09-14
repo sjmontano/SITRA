@@ -12,6 +12,7 @@
   <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" type="image/png" href="/sitra.png" />
 </head>
 <body>
   <div class="bg">
@@ -24,7 +25,7 @@
   <div class="page">
     <header class="anim header" style="--d: 0s">
       <a class="logo" href="/" aria-label="SITRA inicio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <img src="/sitra.png" alt="SITRA" />
       </a>
       <nav class="nav" aria-label="Principal">
         <a href="/" class="nav-link active">Inicio</a>
@@ -35,7 +36,8 @@
       <a href="/registrar" class="sign-in">Registrar</a>
     </header>
 
-    <main class="hero anim" style="--d: 0.05s">
+    <main class="hero hero-grid anim" style="--d: 0.05s">
+      <div class="hero-copy">
       <div class="trust-row anim" style="--d: 0.05s">
         <div class="trust-avatars">
           <span class="avatar a1"><i class="fa-solid fa-link"></i></span>
@@ -52,15 +54,13 @@
       </div>
 
       <p class="subhead anim" style="--d: 0.28s">
-        SITRA registra entregas y transferencias de recursos públicos —
-        ej. <strong>COMP-001</strong> de Secretaría → Institución A → Institución B —
-        con acta firmada por ambas partes y huella SHA-256 en blockchain.
-        Ningún admin solo puede borrar el historial.
+        Actas con doble firma y huella SHA-256 en blockchain.
+        Ningún admin puede borrar el historial.
       </p>
 
       <div class="cta-row anim" style="--d: 0.4s">
         <a href="/registrar" class="cta">Registrar recurso</a>
-        <a href="/laboratorio/minar" class="btn-ghost">⛏️ Laboratorio: mina tu bloque</a>
+        <a href="/laboratorio/minar" class="btn-ghost">⛏️ Laboratorio</a>
       </div>
 
       <form class="lookup anim" id="verificar" style="--d: 0.46s" onsubmit="return false">
@@ -69,6 +69,11 @@
         <button type="button" class="btn-ghost" id="btnTransfer">Transferir</button>
       </form>
       <p class="lookup-hint">Verificación pública: <code>GET /verify/:id</code> compara hash on-chain vs Supabase.</p>
+      </div>
+
+      <div class="hero-visual anim" style="--d: 0.2s" aria-hidden="true">
+        <img src="/sitra.png" alt="" />
+      </div>
     </main>
 
     <footer class="stats anim" style="--d: 0.5s">
