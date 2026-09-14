@@ -1,1 +1,2 @@
-export default { output: "server" };
+import node from "@astrojs/node";
+export default { output: "server", adapter: node({ mode: "standalone" }) };
