@@ -22,8 +22,8 @@ async function main() {
   await ctr.registerInstitution(a.address);
   await ctr.registerInstitution(b.address);
   await ctr.registerInstitution(atacante.address);
-  const id = ethers.keccak256(ethers.toUtf8Bytes("portatil-002"));
-  const h = ethers.keccak256(ethers.toUtf8Bytes("h2"));
+  const id = ethers.sha256(ethers.toUtf8Bytes("portatil-002"));
+  const h = ethers.sha256(ethers.toUtf8Bytes("h2"));
   await ctr.registerResource(id, a.address, h, h);
   console.log("custodio:", await ctr.custodioActual(id), "| atacante:", atacante.address);
 

@@ -23,13 +23,21 @@
     <p class="desc">Aquí aparecen <strong>los ya creados</strong>. Toca uno para ver su desglose estilo Bloque de clase (<code>index · date · data · hash</code>) y luego ir a <strong>Verificar</strong>. ¿Aún no hay ninguno? <a href="/registrar">Registra el primero →</a></p>
 
     <h3 style="margin:12px 0 8px">Ya creados</h3>
+    <div class="form-card" style="margin-bottom:10px">
+      <form id="fq" class="lookup" onsubmit="return false">
+        <input id="qNombre" placeholder="Buscar por nombre de archivo… ej. COMP-001, entrega.pdf" spellcheck="false" autocomplete="off" style="flex:1" />
+        <button type="button" class="btn-ghost" id="btnClear">Limpiar</button>
+      </form>
+      <p class="hash-preview" id="countList"></p>
+    </div>
     <div class="chain-links" id="lista"><p class="desc">Cargando…</p></div>
 
-    <h3 style="margin:16px 0 8px">Buscar por ID</h3>
+    <h3 style="margin:16px 0 8px">Buscar por ID (ver desglose)</h3>
     <div class="form-card">
       <form id="f" class="lookup" onsubmit="return false">
         <input id="rid" placeholder="resourceId (0x…)" spellcheck="false" autocomplete="off" style="flex:1" />
         <button type="submit" class="btn-primary" id="btn">Consultar</button>
+        <button type="button" class="btn-ghost" id="btnGoTransfer">Transferir →</button>
       </form>
       <p class="out" id="out"></p>
       <div class="badges" id="badges" style="margin-top:8px"></div>
@@ -49,6 +57,7 @@
   "use strict";
   function $(id) { return document.getElementById(id); }
   var out = $("out"), chain = $("chain"), badges = $("badges"), lista = $("lista");
+  var allEntries = [];
   var nombres = ["REGISTRO", "TRANSFERIDO", "DEVUELTO", "BAJA"];
   function say(msg, ok) { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = msg; }
   function fmtDate(ts) {
@@ -86,7 +95,8 @@
       '<p class="mono">id<br/>' + esc(item.resourceId || item.resource_id) + '</p>' +
       '<p class="mono">custodio: ' + cust + ' · ' + fecha + '</p>' +
       '<div class="qr-actions"><a href="/consultar?id=' + encodeURIComponent(item.resourceId || item.resource_id) + '">Ver desglose →</a>' +
-      '<a class="ghost" href="/verify/' + encodeURIComponent(item.resourceId || item.resource_id) + '">Verificar →</a></div>';
+      '<a class="ghost" href="/verify/' + encodeURIComponent(item.resourceId || item.resource_id) + '">Verificar →</a>' +
+      '<a class="ghost" href="/transferir/' + encodeURIComponent(item.resourceId || item.resource_id) + '">Transferir →</a></div>';
     return d;
   }
 
@@ -101,11 +111,38 @@
       seen[id] = 1;
       all.push({ item: { resourceId: id, nombre: r.pdf_url, pdfUrl: r.pdf_url, to: "", toNombre: "", fecha: "" }, local: false });
     });
-    if (!all.length) {
+    allEntries = all;
+    applyFilter();
+  }
+
+  function norm(s) {
+    try { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+    catch (e) { return String(s || "").toLowerCase(); }
+  }
+
+  function applyFilter() {
+    var q = norm($("qNombre") ? $("qNombre").value.trim() : "");
+    lista.innerHTML = "";
+    var shown = allEntries.filter(function (e) {
+      if (!q) return true;
+      var hay = norm(e.item.nombre) + " " + norm(e.item.pdfUrl) + " " + norm(e.item.resourceId);
+      return hay.indexOf(q) !== -1;
+    });
+    var count = $("countList");
+    if (count) {
+      if (!allEntries.length) count.textContent = "";
+      else if (!q) count.textContent = allEntries.length + " recurso(s) registrado(s).";
+      else count.textContent = shown.length + " de " + allEntries.length + " coinciden con \"" + ($("qNombre").value.trim()) + "\".";
+    }
+    if (!allEntries.length) {
       lista.innerHTML = '<div class="form-card"><p class="desc">Aún no hay recursos. <a href="/registrar">Sube el primero en Registrar →</a></p></div>';
       return;
     }
-    all.forEach(function (e) { lista.appendChild(card(e.item, e.local)); });
+    if (!shown.length) {
+      lista.innerHTML = '<div class="form-card"><p class="desc">Sin coincidencias. Prueba con parte del nombre (ej. COMP, entrega, .pdf) o <a href="/registrar">registra uno nuevo →</a></p></div>';
+      return;
+    }
+    shown.forEach(function (e) { lista.appendChild(card(e.item, e.local)); });
   }
 
   fetch("/api/resources/list").then(function (r) { return r.json(); })
@@ -183,6 +220,13 @@
   }
 
   $("f").addEventListener("submit", function () { consultar($("rid").value.trim()); });
+  if ($("btnGoTransfer")) $("btnGoTransfer").addEventListener("click", function () {
+    var v = $("rid").value.trim();
+    if (!v) { say("Pega el resourceId para transferir, o toca un recurso de la lista.", false); $("rid").focus(); return; }
+    location.href = "/transferir/" + encodeURIComponent(v);
+  });
+  if ($("qNombre")) $("qNombre").addEventListener("input", function () { applyFilter(); });
+  if ($("btnClear")) $("btnClear").addEventListener("click", function () { $("qNombre").value = ""; applyFilter(); $("qNombre").focus(); });
   var q = null;
   try { q = new URLSearchParams(location.search).get("id"); } catch (e) {}
   if (q) { $("rid").value = q; consultar(q); }

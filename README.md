@@ -67,7 +67,7 @@ Si un administrador intenta cambiar “Recibido por: Institución A” → “In
 - **🔏 Autorización dual atómica** — `executeTransfer` exige `sigFrom + sigTo` sobre el mismo digest EIP-712 en una sola transacción (sin bloqueos de 2 pasos).
 - **📜 Registro append-only** — el contrato no tiene funciones `update`/`delete`; corregir es agregar eventos (`DEVUELTO`, `BAJA`).
 - **🔍 Verificación pública** — `GET /verify/:id` compara huellas on-chain vs Supabase y genera **QR** para actas físicas.
-- **🧾 Doble huella** — `hashEvento = keccak256(acta canónica)` + `hashPDF = keccak256(bytes PDF)`; cualquier alteración se detecta.
+- **🧾 Doble huella** — `hashEvento = SHA-256(acta canónica)` + `hashPDF = SHA-256(bytes PDF)`; cualquier alteración se detecta.
 - **🔄 Gobernanza sin super-admin** — rotación de llaves institucionales exige firma de la llave anterior **y** la nueva.
 - **🧪 Experimento reproducible** — 3 brazos comparables (centralizado / VC + StatusList / blockchain) con scripts demo.
 

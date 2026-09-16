@@ -2,7 +2,9 @@
 import { loadVerify } from "../../lib/verify.js";
 export const prerender = false;
 const { id } = Astro.params;
-const data = await loadVerify(id, Astro.url.origin);
+let data;
+try { data = await loadVerify(id, Astro.url.origin); }
+catch { data = { onchain: [], offchain: null, custodio: null }; }
 const last = data.onchain[data.onchain.length - 1];
 const hashEvento = last ? last.hashEvento : "";
 const hashPDF = last ? last.hashPDF : "";
@@ -94,6 +96,19 @@ const nonceSugerido = data.onchain.length;
   window.__transferReady = true;
   const $ = (id) => document.getElementById(id);
   const out = $("out");
+  // Fallback demo local: si el servidor no trajo datos, buscar en este navegador
+  try {
+    if (!$("from").value && !$("hashEvento").value) {
+      const arr = JSON.parse(localStorage.getItem("sitra-recursos") || "[]");
+      const loc = arr.find((x) => x.resourceId === resourceId);
+      if (loc) {
+        $("from").value = loc.to || "";
+        $("hashEvento").value = loc.hashEvento || "";
+        $("hashPDF").value = loc.hashPDF || "";
+        if ($("nonce").value === "0" || !$("nonce").value) $("nonce").value = "1";
+      }
+    }
+  } catch { /* sin demo local */ }
   const say = (m, ok) => { out.className = "out show " + (ok ? "ok" : "err"); out.textContent = m; };
   let sigFrom = "", doneFrom = false, doneTo = false;
   const isHash = (s) => /^0x[0-9a-fA-F]{64}$/.test(s || "");

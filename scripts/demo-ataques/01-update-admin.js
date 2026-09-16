@@ -22,9 +22,9 @@ async function main() {
   await ctr.waitForDeployment();
   await ctr.registerInstitution(a.address);
   await ctr.registerInstitution(b.address);
-  const id = ethers.keccak256(ethers.toUtf8Bytes("portatil-001"));
-  const hE = ethers.keccak256(ethers.toUtf8Bytes('{"acta":1}'));
-  const hP = ethers.keccak256(ethers.toUtf8Bytes("pdf1"));
+  const id = ethers.sha256(ethers.toUtf8Bytes("portatil-001"));
+  const hE = ethers.sha256(ethers.toUtf8Bytes('{"acta":1}'));
+  const hP = ethers.sha256(ethers.toUtf8Bytes("pdf1"));
   await ctr.registerResource(id, a.address, hE, hP);
 
   const hist = await ctr.historia(id);

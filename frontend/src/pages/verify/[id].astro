@@ -3,7 +3,9 @@ import QRCode from "qrcode";
 import { loadVerify } from "../../lib/verify.js";
 export const prerender = false;
 const { id } = Astro.params;
-const data = await loadVerify(id, Astro.url.origin);
+let data;
+try { data = await loadVerify(id, Astro.url.origin); }
+catch { data = { onchain: [], offchain: null, custodio: null, okEvento: false, okPDF: false }; }
 const url = new URL(`/verify/${id}`, Astro.url.origin).toString();
 let qr = "";
 try { qr = await QRCode.toDataURL(url, { margin: 1, width: 280 }); } catch { qr = ""; }
@@ -68,7 +70,7 @@ const fmtDate = (ts) => { const n = Number(ts); if (!n) return String(ts ?? "—
       </div>
     )}
     <div class="form-card">
-      <p class="desc"><strong>Prueba final (como <code>hash.startswith(difficulty)</code> en clase, pero comparando huellas).</strong> Sube el archivo original: calculamos su <code>keccak256</code> aquí mismo y lo comparamos con el bloque. Si coincide, nadie lo alteró.</p>
+      <p class="desc"><strong>Prueba final (como <code>hash.startswith(difficulty)</code> en clase, pero comparando huellas).</strong> Sube el archivo original: calculamos su <code>SHA-256</code> aquí mismo y lo comparamos con el bloque. Si coincide, nadie lo alteró.</p>
       <div class="field">
         <label for="checkFile">Subir archivo a comprobar</label>
         <input id="checkFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.json,.txt" />
@@ -132,12 +134,12 @@ const fmtDate = (ts) => { const n = Number(ts); if (!n) return String(ts ?? "—
       if (input) input.addEventListener("change", function (e) {
         var f = e.target.files && e.target.files[0];
         if (!f) { if (out) out.textContent = "Sin archivo."; return; }
-        if (out) out.textContent = "Calculando keccak de " + f.name + "…";
+        if (out) out.textContent = "Calculando SHA-256 de " + f.name + "…";
         var reader = new FileReader();
         reader.onerror = function () { if (out) out.textContent = "No se pudo leer el archivo."; };
         reader.onload = function () {
           try {
-            var h = window.SitraHash.keccakOfBytes(new Uint8Array(reader.result));
+            var h = window.SitraHash.sha256OfBytes(new Uint8Array(reader.result));
             var okChain = exp && h.toLowerCase() === String(exp).toLowerCase();
             var okOff = offExp && h.toLowerCase() === String(offExp).toLowerCase();
             if (out) out.textContent = (okChain ? "✅ coincide — archivo íntegro" : "❌ NO coincide — archivo alterado o distinto") + " · " + h + (offExp ? (okOff ? " · ✅ off-chain" : " · ❌ difiere off-chain") : "");

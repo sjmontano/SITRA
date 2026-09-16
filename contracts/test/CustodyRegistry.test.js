@@ -12,8 +12,8 @@ describe("CustodyRegistry", () => {
     const F = await ethers.getContractFactory("CustodyRegistry");
     const ctr = await F.deploy(); await ctr.waitForDeployment();
     await ctr.registerInstitution(a.address); await ctr.registerInstitution(b.address);
-    const id = ethers.keccak256(ethers.toUtf8Bytes("portatil-001"));
-    const hE = ethers.keccak256(ethers.toUtf8Bytes('{"acta":1}')), hP = ethers.keccak256(ethers.toUtf8Bytes("pdf1"));
+    const id = ethers.sha256(ethers.toUtf8Bytes("portatil-001"));
+    const hE = ethers.sha256(ethers.toUtf8Bytes('{"acta":1}')), hP = ethers.sha256(ethers.toUtf8Bytes("pdf1"));
     await ctr.registerResource(id, a.address, hE, hP);
     const sF = await signTransfer(a, ctr, a.address, b.address, id, hE, hP, 1);
     const sT = await signTransfer(b, ctr, a.address, b.address, id, hE, hP, 1);
@@ -24,7 +24,7 @@ describe("CustodyRegistry", () => {
     const [a, b, c] = await ethers.getSigners();
     const ctr = await (await ethers.getContractFactory("CustodyRegistry")).deploy(); await ctr.waitForDeployment();
     await ctr.registerInstitution(a.address); await ctr.registerInstitution(b.address); await ctr.registerInstitution(c.address);
-    const id = ethers.keccak256(ethers.toUtf8Bytes("x")); const h = ethers.keccak256(ethers.toUtf8Bytes("h"));
+    const id = ethers.sha256(ethers.toUtf8Bytes("x")); const h = ethers.sha256(ethers.toUtf8Bytes("h"));
     await ctr.registerResource(id, a.address, h, h);
     const s1 = await signTransfer(c, ctr, c.address, b.address, id, h, h, 1);
     const s2 = await signTransfer(b, ctr, c.address, b.address, id, h, h, 1);

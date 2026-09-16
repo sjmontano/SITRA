@@ -1,106 +1,99 @@
 /* ============================================================
-   SITRA Hash — keccak256 autocontenido para el navegador.
-   Sin dependencias: el `import "ethers"` en <script type=module>
-   fallaba sin importmap y dejaba el boton Registrar muerto.
-   API: window.SitraHash = { keccak256Hex, keccakOf, keccakOfBytes,
+   SITRA Hash — SHA-256 autocontenido para el navegador.
+   Replica lo del profe en clase: sha256(index + date + data ...)
+   Aqui: hashPDF = SHA-256(bytes archivo), hashEvento = SHA-256(acta).
+   Sincrono y sin dependencias (igual que sitra-lab.js pero sync
+   para no volver async el formulario de Registrar).
+   API: window.SitraHash = { sha256Of, sha256OfBytes,
                              buildActaCanonica }
-   keccak256("abc") = 4e03657aea45a94fc7e56d261c94a406a1658c85a5d10c831526335c7455c1b
+   SHA-256("abc") = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+   NOTA: las firmas EIP-712 del contrato siguen usando keccak
+   interno de Ethereum (estandar). Solo las huellas de
+   documentos usan SHA-256 como en clase.
    ============================================================ */
 (function (root) {
   "use strict";
 
-  var MASK64 = 0xffffffffffffffffn;
-
-  var RC = [
-    0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an,
-    0x8000000080008000n, 0x000000000000808bn, 0x0000000080000001n,
-    0x8000000080008081n, 0x8000000000008009n, 0x000000000000008an,
-    0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
-    0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n,
-    0x8000000000008003n, 0x8000000000008002n, 0x8000000000000080n,
-    0x000000000000800an, 0x800000008000000an, 0x8000000080008081n,
-    0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
+  var K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
+    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
+    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
+    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
+    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  // r[x][y] — offsets de rotacion (FIPS-202 Tabla 2), en orden R[x + 5*y].
-  var R = [
-    0, 1, 62, 28, 27,
-    36, 44, 6, 55, 20,
-    3, 10, 43, 25, 39,
-    41, 45, 15, 21, 8,
-    18, 2, 61, 56, 14
-  ];
+  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
 
-  function rotl64(x, n) {
-    n = BigInt(n);
-    if (n === 0n) return x & MASK64;
-    return ((x << n) | (x >> (64n - n))) & MASK64;
-  }
+  function sha256Bytes(msg) {
+    var bytes = msg instanceof Uint8Array ? msg : new Uint8Array(msg || []);
+    var bitLen = bytes.length * 8;
+    // padding: 0x80 + ceros + longitud 64 bits big-endian
+    var withOne = bytes.length + 1;
+    var padLen = (64 - ((withOne + 8) % 64)) % 64;
+    var total = withOne + padLen + 8;
+    var buf = new Uint8Array(total);
+    buf.set(bytes, 0);
+    buf[bytes.length] = 0x80;
+    // longitud en bits como 64-bit big endian (alto luego bajo)
+    var hi = Math.floor(bitLen / 4294967296), lo = bitLen >>> 0;
+    buf[total - 8] = (hi >>> 24) & 0xff;
+    buf[total - 7] = (hi >>> 16) & 0xff;
+    buf[total - 6] = (hi >>> 8) & 0xff;
+    buf[total - 5] = hi & 0xff;
+    buf[total - 4] = (lo >>> 24) & 0xff;
+    buf[total - 3] = (lo >>> 16) & 0xff;
+    buf[total - 2] = (lo >>> 8) & 0xff;
+    buf[total - 1] = lo & 0xff;
 
-  function keccakF(s) {
-    var C = new BigUint64Array(5);
-    var D = new BigUint64Array(5);
-    var B = new BigUint64Array(25);
-    for (var round = 0; round < 24; round++) {
-      for (var x = 0; x < 5; x++) {
-        C[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
+    var h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+    var h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+    var w = new Array(64);
+
+    for (var off = 0; off < total; off += 64) {
+      for (var i = 0; i < 16; i++) {
+        w[i] = ((buf[off + i * 4] << 24) | (buf[off + i * 4 + 1] << 16) |
+                (buf[off + i * 4 + 2] << 8) | buf[off + i * 4 + 3]) >>> 0;
       }
-      for (var x2 = 0; x2 < 5; x2++) {
-        D[x2] = C[(x2 + 4) % 5] ^ rotl64(C[(x2 + 1) % 5], 1);
+      for (var t = 16; t < 64; t++) {
+        var s0 = (rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3)) >>> 0;
+        var s1 = (rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10)) >>> 0;
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
       }
-      for (var xi = 0; xi < 5; xi++) {
-        for (var y = 0; y < 5; y++) {
-          s[xi + 5 * y] = (s[xi + 5 * y] ^ D[xi]) & MASK64;
-        }
+      var a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for (var j = 0; j < 64; j++) {
+        var S1 = (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) >>> 0;
+        var ch = ((e & f) ^ (~e & g)) >>> 0;
+        var t1 = (h + S1 + ch + K[j] + w[j]) >>> 0;
+        var S0 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) >>> 0;
+        var maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+        var t2 = (S0 + maj) >>> 0;
+        h = g; g = f; f = e; e = (d + t1) >>> 0;
+        d = c; c = b; b = a; a = (t1 + t2) >>> 0;
       }
-      for (var x3 = 0; x3 < 5; x3++) {
-        for (var y3 = 0; y3 < 5; y3++) {
-          B[y3 + 5 * ((2 * x3 + 3 * y3) % 5)] = rotl64(s[x3 + 5 * y3], R[x3 + 5 * y3]);
-        }
-      }
-      for (var x4 = 0; x4 < 5; x4++) {
-        for (var y4 = 0; y4 < 5; y4++) {
-          s[x4 + 5 * y4] = (B[x4 + 5 * y4] ^ ((~B[(x4 + 1) % 5 + 5 * y4]) & B[(x4 + 2) % 5 + 5 * y4])) & MASK64;
-        }
-      }
-      s[0] = (s[0] ^ RC[round]) & MASK64;
+      h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0;
+      h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+      h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0;
+      h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
     }
-  }
 
-  function keccak256Bytes(msg) {
-    var rate = 136; // 1088 bits
-    var s = new BigUint64Array(25);
-    var off = 0;
-    while (off < msg.length) {
-      var blockLen = Math.min(rate, msg.length - off);
-      for (var i = 0; i < blockLen; i++) {
-        var lane = (i / 8) | 0;
-        var shift = BigInt((i % 8) * 8);
-        s[lane] = (s[lane] ^ (BigInt(msg[off + i]) << shift)) & MASK64;
-      }
-      off += blockLen;
-      if (blockLen === rate) {
-        keccakF(s);
-      }
-    }
-    // pad10*1 keccak (suffix 0x01): el ultimo bloque procesado incluye padding
-    var padIndex = msg.length % rate;
-    var laneP = (padIndex / 8) | 0;
-    var shiftP = BigInt((padIndex % 8) * 8);
-    s[laneP] = (s[laneP] ^ (0x01n << shiftP)) & MASK64;
-    var lastLane = (rate - 1) / 8 | 0;
-    var lastShift = BigInt(((rate - 1) % 8) * 8);
-    s[lastLane] = (s[lastLane] ^ (0x80n << lastShift)) & MASK64;
-    // OJO: si el mensaje llenaba el bloque exacto, el padding va en un bloque nuevo.
-    // El codigo de arriba refleja el caso general solo si procesamos el bloque
-    // parcial; como ya absorbimos todo sin permutar el parcial, permutamos una vez:
-    keccakF(s);
     var out = new Uint8Array(32);
-    for (var j = 0; j < 4; j++) {
-      var v = s[j];
-      for (var k = 0; k < 8; k++) {
-        out[j * 8 + k] = Number((v >> BigInt(k * 8)) & 0xffn);
-      }
+    var hs = [h0, h1, h2, h3, h4, h5, h6, h7];
+    for (var k = 0; k < 8; k++) {
+      out[k * 4] = (hs[k] >>> 24) & 0xff;
+      out[k * 4 + 1] = (hs[k] >>> 16) & 0xff;
+      out[k * 4 + 2] = (hs[k] >>> 8) & 0xff;
+      out[k * 4 + 3] = hs[k] & 0xff;
     }
     return out;
   }
@@ -117,13 +110,13 @@
     return new TextEncoder().encode(str);
   }
 
-  function keccakOf(obj) {
+  function sha256Of(obj) {
     var s = typeof obj === "string" ? obj : JSON.stringify(obj);
-    return toHex(keccak256Bytes(utf8Bytes(s)));
+    return toHex(sha256Bytes(utf8Bytes(s)));
   }
 
-  function keccakOfBytes(u8) {
-    return toHex(keccak256Bytes(u8 instanceof Uint8Array ? u8 : new Uint8Array(u8)));
+  function sha256OfBytes(u8) {
+    return toHex(sha256Bytes(u8 instanceof Uint8Array ? u8 : new Uint8Array(u8 || [])));
   }
 
   function buildActaCanonica(o) {
@@ -142,9 +135,13 @@
   }
 
   root.SitraHash = {
-    keccak256Bytes: keccak256Bytes,
-    keccakOf: keccakOf,
-    keccakOfBytes: keccakOfBytes,
-    buildActaCanonica: buildActaCanonica
+    sha256Bytes: sha256Bytes,
+    sha256Of: sha256Of,
+    sha256OfBytes: sha256OfBytes,
+    buildActaCanonica: buildActaCanonica,
+    // Alias de compatibilidad (antes keccak). Apuntan a SHA-256.
+    keccak256Bytes: sha256Bytes,
+    keccakOf: sha256Of,
+    keccakOfBytes: sha256OfBytes
   };
 })(typeof window !== "undefined" ? window : globalThis);

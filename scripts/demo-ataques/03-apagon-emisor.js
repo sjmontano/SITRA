@@ -16,8 +16,8 @@ async function main() {
   await ctr.waitForDeployment();
   await ctr.registerInstitution(a.address);
   await ctr.registerInstitution(b.address);
-  const id = ethers.keccak256(ethers.toUtf8Bytes("portatil-003"));
-  const h = ethers.keccak256(ethers.toUtf8Bytes("h3"));
+  const id = ethers.sha256(ethers.toUtf8Bytes("portatil-003"));
+  const h = ethers.sha256(ethers.toUtf8Bytes("h3"));
   await ctr.registerResource(id, a.address, h, h);
 
   const hist = await ctr.historia(id); // lectura directa, sin emisor

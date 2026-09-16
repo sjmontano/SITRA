@@ -10,13 +10,16 @@ export async function signTransfer({ contractAddress, from, to, resourceId, hash
     { from, to, resourceId, hashEvento, hashPDF, nonce }
   );
 }
-export function keccakOf(obj) {
+export function sha256Of(obj) {
   const s = typeof obj === "string" ? obj : JSON.stringify(obj);
-  return ethers.keccak256(ethers.toUtf8Bytes(s));
+  return ethers.sha256(ethers.toUtf8Bytes(s));
 }
-export function keccakOfBytes(u8) {
-  return ethers.keccak256(u8);
+export function sha256OfBytes(u8) {
+  return ethers.sha256(u8);
 }
+// Alias de compatibilidad (antes keccak). Ahora SHA-256 como en clase.
+export const keccakOf = sha256Of;
+export const keccakOfBytes = sha256OfBytes;
 export function buildActaCanonica({ item, entrega, fecha, responsable_entrega, responsable_recibe, estado_acta }) {
   return JSON.stringify({ detalle: item, entrega, estado_acta: estado_acta || "ENTREGA", fecha, item: item.split("·")[0].trim(), observaciones: "", responsable_entrega: responsable_entrega || "Secretaría", responsable_recibe: responsable_recibe || "Institución A" });
 }

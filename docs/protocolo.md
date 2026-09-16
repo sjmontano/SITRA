@@ -20,5 +20,5 @@
 - rotateInstitutionKey: solo con firma de llave anterior + firma de llave nueva (gobernanza dual, sin super-admin).
 
 ## 5. Dos hashes
-- hashEvento = keccak256(JSON acta canónica ordenada). hashPDF = keccak256(bytes PDF). Ambos on-chain, nunca el documento.
+- hashEvento = SHA-256(JSON acta canónica ordenada). hashPDF = SHA-256(bytes PDF). Ambos on-chain, nunca el documento.
 - Límite oráculo: este registro no afirma veracidad física ni localización; solo prueba doble firma en orden append-only.

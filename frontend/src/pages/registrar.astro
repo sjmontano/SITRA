@@ -105,7 +105,7 @@
     $("toCustom").addEventListener("input", function () { if (fileReady) rebuildActa(); });
 
     function refreshHash() {
-      try { $("resHashE").textContent = "hashEvento: " + window.SitraHash.keccakOf($("acta").value || "{}"); }
+      try { $("resHashE").textContent = "hashEvento: " + window.SitraHash.sha256Of($("acta").value || "{}"); }
       catch (e) { $("resHashE").textContent = "hashEvento: —"; }
     }
 
@@ -139,7 +139,7 @@
         try {
           fileBytes = new Uint8Array(reader.result);
           fileName = f.name;
-          var hPDF = window.SitraHash.keccakOfBytes(fileBytes);
+          var hPDF = window.SitraHash.sha256OfBytes(fileBytes);
           $("pdfHash").value = hPDF;
           rebuildActa();
           fileReady = true;
@@ -172,8 +172,8 @@
       var nombre = $("nombre").value.trim() || "RECURSO";
       var hashEvento, resourceId;
       try {
-        hashEvento = window.SitraHash.keccakOf(acta);
-        resourceId = window.SitraHash.keccakOf(nombre + "|" + Date.now());
+        hashEvento = window.SitraHash.sha256Of(acta);
+        resourceId = window.SitraHash.sha256Of(nombre + "|" + Date.now());
       } catch (err) { say("error: " + String((err && err.message) || err), false); return; }
       var pdfUrl = fileName;
       var btn = $("btn");
